@@ -2,6 +2,11 @@
 
 All notable changes to TaskTrack will be documented in this file. This project adheres to a manual release process; update both this file and `assets/changelog.json` when shipping new versions so the in-app update summary stays accurate.
 
+## [0.0.2] - 2025-12-07
+- Let tasks declare which pomodoro round they belong to, with quick actions to move them forward and round labels in the UI.
+- Prompt for confirmation when a focus round ends and automatically carry unfinished work to the next round instead of silently logging it.
+- Surface the current round beside the active task and timer so the flow of focus → break cycles stays clear.
+
 ## [0.0.1] - 2025-12-07
 - Add a Today view with task planning, active task selection, and a pomodoro timer that plays a chime when focus ends.
 - Persist tasks by date to power daily summaries and a This Week overview of planned vs. completed pomodoros.
