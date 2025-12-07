@@ -58,6 +58,7 @@
     completed: 0,
     description: '',
     done: false,
+    assignedRound: 1,
   };
 
   let timerIntervalId = null;
@@ -206,6 +207,7 @@
   const defaultData = () => ({
     tasksByDate: {},
     activeTaskByDate: {},
+    roundByDate: {},
   });
 
   const loadAppData = () => {
@@ -220,6 +222,7 @@
           parsed.activeTaskByDate && typeof parsed.activeTaskByDate === 'object'
             ? parsed.activeTaskByDate
             : {},
+        roundByDate: parsed.roundByDate && typeof parsed.roundByDate === 'object' ? parsed.roundByDate : {},
       };
     } catch (_) {
       return defaultData();
@@ -238,6 +241,11 @@
     if (!appData.tasksByDate[dateKey]) {
       appData.tasksByDate[dateKey] = [];
     }
+    appData.tasksByDate[dateKey].forEach((task) => {
+      if (!Number.isFinite(task.assignedRound) || task.assignedRound < 1) {
+        task.assignedRound = TASK_DEFAULTS.assignedRound;
+      }
+    });
     return appData.tasksByDate[dateKey];
   };
 
@@ -250,6 +258,26 @@
       delete appData.activeTaskByDate[dateKey];
     }
     persistAppData();
+  };
+
+  const getCurrentRound = (dateKey) => {
+    const rawRound = appData.roundByDate?.[dateKey];
+    const normalized = Number.isFinite(Number(rawRound)) ? Math.max(1, Math.floor(Number(rawRound))) : 1;
+    if (!appData.roundByDate) appData.roundByDate = {};
+    if (!appData.roundByDate[dateKey]) appData.roundByDate[dateKey] = normalized;
+    return normalized;
+  };
+
+  const setCurrentRound = (dateKey, round) => {
+    if (!appData.roundByDate) appData.roundByDate = {};
+    appData.roundByDate[dateKey] = Math.max(1, Math.floor(round || 1));
+    persistAppData();
+  };
+
+  const advanceRound = (dateKey) => {
+    const next = getCurrentRound(dateKey) + 1;
+    setCurrentRound(dateKey, next);
+    renderRoundInfo();
   };
 
   const upsertTask = (dateKey, task) => {
@@ -286,6 +314,15 @@
     const target = tasks.find((task) => task.id === taskId);
     if (!target) return;
     target.completed = Math.max(0, (Number(target.completed) || 0) + completedDelta);
+    persistAppData();
+  };
+
+  const updateTaskRound = (dateKey, taskId, round) => {
+    const tasks = getTasksForDate(dateKey);
+    const target = tasks.find((task) => task.id === taskId);
+    if (!target) return;
+    target.assignedRound = Math.max(1, Math.floor(round || 1));
+    target.done = false;
     persistAppData();
   };
 
@@ -419,7 +456,7 @@
     if (persist) persistTimerState();
   };
 
-  const handleTimerComplete = () => {
+  const handleTimerComplete = async () => {
     stopTimerTick();
     timerState.isRunning = false;
     timerState.remaining = 0;
@@ -436,25 +473,42 @@
 
     if (timerState.mode === 'focus') {
       const todayKey = getTodayKey();
+      const currentRound = getCurrentRound(todayKey);
       const activeTaskId = getActiveTaskId(todayKey);
-      if (activeTaskId) {
-        updateTaskCompletion(todayKey, activeTaskId, 1);
-        renderTasks();
+      const activeTask = getTasksForDate(todayKey).find((task) => task.id === activeTaskId);
+
+      if (activeTask) {
+        const finished = await showConfirm({
+          message: `Round ${currentRound} finished. Did you complete "${activeTask.title}"?`,
+          confirmLabel: 'Yes, finished',
+          cancelLabel: 'Not yet',
+        });
+        if (finished) {
+          updateTaskCompletion(todayKey, activeTaskId, 1);
+          upsertTask(todayKey, { id: activeTaskId, done: true });
+        } else {
+          updateTaskRound(todayKey, activeTaskId, currentRound + 1);
+          setTimerStatus('Carrying this task over to the next round.', 'warning');
+        }
+      } else {
+        setTimerStatus('Focus complete, but no active task was selected.', 'warning');
       }
 
       const newStreak = (timerState.focusStreak || 0) + 1;
       const reachedLongBreak = newStreak >= timerConfig.sessionsBeforeLongBreak;
       timerState.focusStreak = reachedLongBreak ? 0 : newStreak;
+      advanceRound(todayKey);
+      renderTasks();
       const nextMode = reachedLongBreak ? 'longBreak' : 'shortBreak';
       resetTimer({ mode: nextMode, persist: false });
       startTimer({ clearStatus: false });
       setTimerStatus(
-        activeTaskId
+        activeTask
           ? `Focus complete! Starting a ${nextMode === 'longBreak' ? 'long' : 'short'} break.`
           : `Focus complete, but no active task was selected. Starting a ${
               nextMode === 'longBreak' ? 'long' : 'short'
             } break.`,
-        activeTaskId ? 'muted' : 'warning'
+        activeTask ? 'muted' : 'warning'
       );
       return;
     }
@@ -476,12 +530,15 @@
     renderTimer();
     persistTimerState();
     if (timerState.remaining === 0) {
-      handleTimerComplete();
+      void handleTimerComplete();
     }
   };
 
   const startTimer = ({ clearStatus = true } = {}) => {
     if (timerState.isRunning) return;
+    if (timerState.mode === 'focus') {
+      ensureActiveTaskForRound(getTodayKey());
+    }
     if (!Number.isFinite(timerState.remaining) || timerState.remaining <= 0) {
       timerState.remaining = getDurationSeconds(timerState.mode);
     }
@@ -509,9 +566,47 @@
     setTimerStatus('');
   };
 
+  const findBestTaskForRound = (dateKey) => {
+    const tasks = getTasksForDate(dateKey)
+      .filter((task) => !task.done)
+      .slice()
+      .sort((a, b) => (a.assignedRound || 1) - (b.assignedRound || 1));
+    const currentRound = getCurrentRound(dateKey);
+    return tasks.find((task) => (task.assignedRound || 1) <= currentRound) || tasks[0] || null;
+  };
+
+  const ensureActiveTaskForRound = (dateKey) => {
+    const activeId = getActiveTaskId(dateKey);
+    const tasks = getTasksForDate(dateKey);
+    const activeTask = tasks.find((task) => task.id === activeId && !task.done);
+    const currentRound = getCurrentRound(dateKey);
+    if (activeTask && (activeTask.assignedRound || 1) <= currentRound) return activeTask;
+    const candidate = findBestTaskForRound(dateKey);
+    if (candidate) {
+      setActiveTaskId(dateKey, candidate.id);
+      return candidate;
+    }
+    setActiveTaskId(dateKey, null);
+    return null;
+  };
+
+  const renderRoundInfo = () => {
+    const todayKey = getTodayKey();
+    const round = getCurrentRound(todayKey);
+    const currentRoundLabel = document.getElementById('currentRoundLabel');
+    if (currentRoundLabel) {
+      currentRoundLabel.textContent = `Current pomodoro round: ${round}`;
+    }
+    const timerRoundLabel = document.getElementById('timerRoundLabel');
+    if (timerRoundLabel) {
+      timerRoundLabel.textContent = `Round ${round}`;
+    }
+  };
+
   const renderActiveTaskBadge = () => {
     const activeLabel = document.getElementById('activeTaskLabel');
     const todayKey = getTodayKey();
+    renderRoundInfo();
     const activeId = getActiveTaskId(todayKey);
     const activeTask = getTasksForDate(todayKey).find((task) => task.id === activeId);
     if (activeLabel) {
@@ -608,7 +703,11 @@
     } else {
       tasks
         .slice()
-        .sort((a, b) => Number(a.done) - Number(b.done))
+        .sort((a, b) => {
+          const roundDiff = (a.assignedRound || 1) - (b.assignedRound || 1);
+          if (roundDiff !== 0) return roundDiff;
+          return Number(a.done) - Number(b.done);
+        })
         .forEach((task) => {
           const wrapper = document.createElement('div');
           wrapper.className = 'border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3';
@@ -641,7 +740,7 @@
           meta.className = 'flex flex-wrap gap-3 text-sm text-gray-700 dark:text-gray-300';
           meta.innerHTML = `<span class="font-semibold">Planned:</span> ${task.planned || 0} <span class="font-semibold">Completed:</span> ${
             task.completed || 0
-          }`;
+          } <span class="font-semibold">Round:</span> ${task.assignedRound || 1}`;
           wrapper.appendChild(meta);
 
           const actions = document.createElement('div');
@@ -663,6 +762,14 @@
           toggleDoneBtn.textContent = task.done ? 'Mark as in progress' : 'Mark done';
           actions.appendChild(toggleDoneBtn);
 
+          const moveRoundBtn = document.createElement('button');
+          moveRoundBtn.type = 'button';
+          moveRoundBtn.className = 'btn btn-gray';
+          moveRoundBtn.dataset.taskAction = 'nextRound';
+          moveRoundBtn.dataset.taskId = task.id;
+          moveRoundBtn.textContent = 'Move to next round';
+          actions.appendChild(moveRoundBtn);
+
           const editBtn = document.createElement('button');
           editBtn.type = 'button';
           editBtn.className = 'btn btn-blue';
@@ -683,6 +790,7 @@
           list.appendChild(wrapper);
         });
     }
+    ensureActiveTaskForRound(todayKey);
     renderTodaySummary();
     renderWeekSummary();
     renderActiveTaskBadge();
@@ -693,6 +801,7 @@
     const title = document.getElementById('taskTitle');
     const description = document.getElementById('taskDescription');
     const planned = document.getElementById('taskPlanned');
+    const round = document.getElementById('taskRound');
     const submit = document.getElementById('taskSubmit');
     const cancel = document.getElementById('taskCancel');
     editingTaskId = null;
@@ -700,6 +809,7 @@
     if (title) title.value = '';
     if (description) description.value = '';
     if (planned) planned.value = TASK_DEFAULTS.planned;
+    if (round) round.value = getCurrentRound(getTodayKey());
     if (submit) submit.textContent = 'Add task';
     if (cancel) cancel.classList.add('hidden');
   };
@@ -708,12 +818,14 @@
     const title = document.getElementById('taskTitle');
     const description = document.getElementById('taskDescription');
     const planned = document.getElementById('taskPlanned');
+    const round = document.getElementById('taskRound');
     const submit = document.getElementById('taskSubmit');
     const cancel = document.getElementById('taskCancel');
     editingTaskId = task.id;
     if (title) title.value = task.title || '';
     if (description) description.value = task.description || '';
     if (planned) planned.value = task.planned ?? TASK_DEFAULTS.planned;
+    if (round) round.value = task.assignedRound ?? TASK_DEFAULTS.assignedRound;
     if (submit) submit.textContent = 'Update task';
     if (cancel) cancel.classList.remove('hidden');
   };
@@ -1555,11 +1667,15 @@
         const title = (document.getElementById('taskTitle')?.value || '').trim();
         const description = document.getElementById('taskDescription')?.value || '';
         const plannedRaw = Number.parseInt(document.getElementById('taskPlanned')?.value, 10);
+        const roundRaw = Number.parseInt(document.getElementById('taskRound')?.value, 10);
         if (!title) {
           setTimerStatus('Please add a title for your task.', 'warning');
           return;
         }
         const planned = Number.isFinite(plannedRaw) ? Math.max(0, plannedRaw) : TASK_DEFAULTS.planned;
+        const assignedRound = Number.isFinite(roundRaw)
+          ? Math.max(1, roundRaw)
+          : getCurrentRound(todayKey);
         const existingTask = editingTaskId
           ? getTasksForDate(todayKey).find((task) => task.id === editingTaskId)
           : null;
@@ -1574,6 +1690,7 @@
           planned,
           completed,
           done: existingTask ? existingTask.done : false,
+          assignedRound,
         };
         upsertTask(todayKey, payload);
         if (!getActiveTaskId(todayKey)) {
@@ -1620,6 +1737,10 @@
             if (task) populateTaskForm(task);
             break;
           }
+          case 'nextRound':
+            updateTaskRound(todayKey, taskId, (getTasksForDate(todayKey).find((t) => t.id === taskId)?.assignedRound || 1) + 1);
+            renderTasks();
+            break;
           case 'activate':
             setActiveTaskId(todayKey, taskId);
             renderTasks();

@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.0.2",
+    "date": "2025-12-07",
+    "changes": [
+      "Let tasks declare which pomodoro round they belong to, with quick actions to move them forward and round labels in the UI.",
+      "Prompt for confirmation when a focus round ends and automatically carry unfinished work to the next round instead of silently logging it.",
+      "Surface the current round beside the active task and timer so the flow of focus → break cycles stays clear."
+    ]
+  },
+  {
     "version": "0.0.1",
     "date": "2025-12-07",
     "changes": [
