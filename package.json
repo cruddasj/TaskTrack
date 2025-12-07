@@ -1,7 +1,7 @@
 {
-  "name": "PWA Template",
+  "name": "tasktrack-pomodoro",
   "version": "0.0.0",
-  "description": "PWA Template is a personal wealth projection and planning tool built as a single-page application. It helps you capture assets and goals, run forecasts, explore portfolio insights, and maintain historical snapshots.",
+  "description": "TaskTrack is a day planner with built-in pomodoro tracking and weekly focus summaries.",
   "main": "service-worker.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -12,9 +12,9 @@
   "keywords": [],
   "author": "James Cruddas",
   "type": "commonjs",
-  "homepage": "https://github.com/cruddasj/PWA Template#readme",
+  "homepage": "https://github.com/cruddasj/TaskTrack#readme",
   "devDependencies": {
-    "sharp": "^0.33.4",
+    "sharp": "^0.33.5",
     "tailwindcss": "^3.4.14"
   }
 }

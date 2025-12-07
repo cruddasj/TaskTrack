@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PWA Template</title>
+    <title>TaskTrack</title>
     <meta name="theme-color" content="#111827" />
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/icons/app-logo.svg" type="image/svg+xml" />
@@ -44,31 +44,54 @@
     >
       <defs>
         <linearGradient id="app-logo-gradient" x1="50%" y1="0%" x2="50%" y2="100%">
-          <stop offset="0%" stop-color="hsl(115, 69%, 60%)" stop-opacity="1"></stop>
-          <stop offset="100%" stop-color="hsl(205, 69%, 80%)" stop-opacity="1"></stop>
+          <stop offset="45%" stop-color="hsl(184, 74%, 44%)" />
+          <stop offset="100%" stop-color="hsl(227, 80%, 33%)" />
         </linearGradient>
+        <clipPath id="app-logo-clip-a">
+          <rect width="57.142857142857146" height="800" x="0" y="0" />
+          <rect width="57.142857142857146" height="800" x="114.28571428571429" y="0" />
+          <rect width="57.142857142857146" height="800" x="228.57142857142858" y="0" />
+          <rect width="57.142857142857146" height="800" x="342.8571428571429" y="0" />
+          <rect width="57.142857142857146" height="800" x="457.14285714285717" y="0" />
+          <rect width="57.142857142857146" height="800" x="571.4285714285714" y="0" />
+          <rect width="57.142857142857146" height="800" x="685.7142857142858" y="0" />
+          <rect width="57.142857142857146" height="800" x="800" y="0" />
+          <rect width="57.142857142857146" height="800" x="914.2857142857143" y="0" />
+          <rect width="57.142857142857146" height="800" x="1028.5714285714287" y="0" />
+          <rect width="57.142857142857146" height="800" x="1142.857142857143" y="0" />
+          <rect width="57.142857142857146" height="800" x="1257.142857142857" y="0" />
+          <rect width="57.142857142857146" height="800" x="1371.4285714285716" y="0" />
+          <rect width="57.142857142857146" height="800" x="1485.7142857142858" y="0" />
+          <rect width="57.142857142857146" height="800" x="1600" y="0" />
+        </clipPath>
+        <clipPath id="app-logo-clip-b">
+          <rect width="57.142857142857146" height="800" x="57.142857142857146" y="0" />
+          <rect width="57.142857142857146" height="800" x="171.42857142857144" y="0" />
+          <rect width="57.142857142857146" height="800" x="285.7142857142857" y="0" />
+          <rect width="57.142857142857146" height="800" x="400" y="0" />
+          <rect width="57.142857142857146" height="800" x="514.2857142857143" y="0" />
+          <rect width="57.142857142857146" height="800" x="628.5714285714287" y="0" />
+          <rect width="57.142857142857146" height="800" x="742.8571428571429" y="0" />
+          <rect width="57.142857142857146" height="800" x="857.1428571428572" y="0" />
+          <rect width="57.142857142857146" height="800" x="971.4285714285716" y="0" />
+          <rect width="57.142857142857146" height="800" x="1085.7142857142858" y="0" />
+          <rect width="57.142857142857146" height="800" x="1200" y="0" />
+          <rect width="57.142857142857146" height="800" x="1314.2857142857144" y="0" />
+          <rect width="57.142857142857146" height="800" x="1428.5714285714287" y="0" />
+          <rect width="57.142857142857146" height="800" x="1542.857142857143" y="0" />
+        </clipPath>
         <symbol id="app-logo" viewBox="0 0 800 800">
-          <g stroke="url(#app-logo-gradient)" fill="none" stroke-linecap="round">
-            <circle r="320" cx="400" cy="400" stroke-width="11" stroke-dasharray="1709 2011" transform="rotate(360, 400, 400)"></circle>
-            <circle r="304" cx="400" cy="400" stroke-width="11" stroke-dasharray="1538 1910" transform="rotate(341, 400, 400)"></circle>
-            <circle r="288" cx="400" cy="400" stroke-width="11" stroke-dasharray="1376 1810" transform="rotate(322, 400, 400)"></circle>
-            <circle r="272" cx="400" cy="400" stroke-width="11" stroke-dasharray="1223 1709" transform="rotate(303, 400, 400)"></circle>
-            <circle r="256" cx="400" cy="400" stroke-width="11" stroke-dasharray="1079 1608" transform="rotate(284, 400, 400)"></circle>
-            <circle r="240" cx="400" cy="400" stroke-width="11" stroke-dasharray="944 1508" transform="rotate(265, 400, 400)"></circle>
-            <circle r="224" cx="400" cy="400" stroke-width="11" stroke-dasharray="819 1407" transform="rotate(246, 400, 400)"></circle>
-            <circle r="208" cx="400" cy="400" stroke-width="11" stroke-dasharray="702 1307" transform="rotate(227, 400, 400)"></circle>
-            <circle r="192" cx="400" cy="400" stroke-width="11" stroke-dasharray="594 1206" transform="rotate(208, 400, 400)"></circle>
-            <circle r="176" cx="400" cy="400" stroke-width="11" stroke-dasharray="495 1106" transform="rotate(189, 400, 400)"></circle>
-            <circle r="160" cx="400" cy="400" stroke-width="11" stroke-dasharray="405 1005" transform="rotate(171, 400, 400)"></circle>
-            <circle r="144" cx="400" cy="400" stroke-width="11" stroke-dasharray="324 905" transform="rotate(152, 400, 400)"></circle>
-            <circle r="128" cx="400" cy="400" stroke-width="11" stroke-dasharray="252 804" transform="rotate(133, 400, 400)"></circle>
-            <circle r="112" cx="400" cy="400" stroke-width="11" stroke-dasharray="189 704" transform="rotate(114, 400, 400)"></circle>
-            <circle r="96" cx="400" cy="400" stroke-width="11" stroke-dasharray="135 603" transform="rotate(95, 400, 400)"></circle>
-            <circle r="80" cx="400" cy="400" stroke-width="11" stroke-dasharray="90 503" transform="rotate(76, 400, 400)"></circle>
-            <circle r="64" cx="400" cy="400" stroke-width="11" stroke-dasharray="54 402" transform="rotate(57, 400, 400)"></circle>
-            <circle r="48" cx="400" cy="400" stroke-width="11" stroke-dasharray="27 302" transform="rotate(38, 400, 400)"></circle>
-            <circle r="32" cx="400" cy="400" stroke-width="11" stroke-dasharray="9 201" transform="rotate(19, 400, 400)"></circle>
-            <circle r="16" cx="400" cy="400" stroke-width="11" stroke-dasharray="0 101"></circle>
+          <g stroke-width="40" stroke="url(#app-logo-gradient)" fill="none">
+            <circle r="378" cx="400" cy="400" opacity="0.36" clip-path="url(#app-logo-clip-a)" />
+            <circle r="303" cx="400" cy="400" opacity="0.36" clip-path="url(#app-logo-clip-a)" />
+            <circle r="228" cx="400" cy="400" opacity="0.36" clip-path="url(#app-logo-clip-a)" />
+            <circle r="153" cx="400" cy="400" opacity="0.36" clip-path="url(#app-logo-clip-a)" />
+            <circle r="78" cx="400" cy="400" opacity="0.36" clip-path="url(#app-logo-clip-a)" />
+            <circle r="380" cx="400" cy="400" clip-path="url(#app-logo-clip-b)" />
+            <circle r="305" cx="400" cy="400" clip-path="url(#app-logo-clip-b)" />
+            <circle r="230" cx="400" cy="400" clip-path="url(#app-logo-clip-b)" />
+            <circle r="155" cx="400" cy="400" clip-path="url(#app-logo-clip-b)" />
+            <circle r="80" cx="400" cy="400" clip-path="url(#app-logo-clip-b)" />
           </g>
         </symbol>
       </defs>
@@ -99,7 +122,7 @@
           <use href="#app-logo" xlink:href="#app-logo" />
         </svg>
         <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100">
-          PWA Template
+          TaskTrack
         </h1>
       </div>
     </div>
@@ -125,7 +148,7 @@
             id="brandTitle"
             class="text-2xl leading-none font-bold text-center text-gray-900 dark:text-gray-100"
           >
-            PWA Template
+            TaskTrack
           </h1>
         </button>
       </div>
@@ -140,11 +163,23 @@
         </label>
       </div>
 
-      <nav class="w-full">
-        <button class="nav-btn active-nav-button" data-target="welcome" data-first-time>
+      <nav class="w-full space-y-2">
+        <button class="nav-btn" data-target="welcome" data-first-time>
           <span class="flex items-center">
             <i class="fa-solid fa-circle-info h-5 w-5 mr-3"></i>
             Welcome
+          </span>
+        </button>
+        <button class="nav-btn active-nav-button" data-target="today">
+          <span class="flex items-center">
+            <i class="fa-solid fa-calendar-day h-5 w-5 mr-3"></i>
+            Today
+          </span>
+        </button>
+        <button class="nav-btn" data-target="week">
+          <span class="flex items-center">
+            <i class="fa-solid fa-calendar-week h-5 w-5 mr-3"></i>
+            This week
           </span>
         </button>
         <button class="nav-btn" data-target="settings">
@@ -162,21 +197,276 @@
     ></div>
 
     <main class="flex-1 p-4 md:p-8 overflow-y-auto md:overflow-y-visible overflow-x-hidden">
-      <div id="welcome" class="content-section active" data-first-time>
+      <div id="today" class="content-section active">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <div>
+            <h2 class="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">Today's plan</h2>
+            <p class="text-gray-700 dark:text-gray-300">
+              Plan and track across pomodoro sessions for the day.
+            </p>
+          </div>
+          <div class="text-sm text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-2">
+            <span class="font-semibold">Today:</span> <span id="todayDateLabel"></span>
+          </div>
+        </div>
+
+        <div class="space-y-4">
+          <div
+            class="card is-collapsible"
+            data-collapsible
+            data-collapsible-id="today-plan"
+          >
+            <h3 class="text-xl font-semibold text-gray-900 dark:text-gray-100">
+              <button
+                type="button"
+                class="card-toggle"
+                data-collapsible-trigger
+                aria-expanded="true"
+                aria-controls="today-plan-content"
+              >
+                <span>Plan today's tasks</span>
+                <svg
+                  class="chev"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M6 8l4 4 4-4"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </button>
+            </h3>
+            <div
+              id="today-plan-content"
+              class="card-body space-y-4"
+              data-collapsible-content
+            >
+              <form id="taskForm" class="space-y-4">
+                <div class="grid gap-4 md:grid-cols-2">
+                  <div class="md:col-span-2">
+                    <label for="taskTitle" class="form-label">Title</label>
+                    <input id="taskTitle" type="text" class="input-field" required />
+                  </div>
+                  <div class="md:col-span-2">
+                    <label for="taskDescription" class="form-label">Description (optional)</label>
+                    <textarea id="taskDescription" class="input-field" rows="2"></textarea>
+                  </div>
+                  <div>
+                    <label for="taskPlanned" class="form-label">Planned pomodoros</label>
+                    <input
+                      id="taskPlanned"
+                      type="number"
+                      min="0"
+                      step="1"
+                      class="input-field"
+                      value="1"
+                      required
+                    />
+                  </div>
+                </div>
+                <div class="flex flex-wrap gap-3">
+                  <button type="submit" class="btn btn-blue" id="taskSubmit">Add task</button>
+                  <button type="button" class="btn btn-gray hidden" id="taskCancel">Cancel edit</button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <div
+            class="card is-collapsible"
+            data-collapsible
+            data-collapsible-id="today-tasks"
+          >
+            <h3 class="text-xl font-semibold text-gray-900 dark:text-gray-100">
+              <button
+                type="button"
+                class="card-toggle"
+                data-collapsible-trigger
+                aria-expanded="true"
+                aria-controls="today-tasks-content"
+              >
+                <span>Today's tasks</span>
+                <svg
+                  class="chev"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M6 8l4 4 4-4"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </button>
+            </h3>
+            <div
+              id="today-tasks-content"
+              class="card-body space-y-4"
+              data-collapsible-content
+            >
+              <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <p id="activeTaskLabel" class="text-sm text-gray-600 dark:text-gray-300">
+                  No active task selected
+                </p>
+              </div>
+              <div id="taskList" class="space-y-3"></div>
+            </div>
+          </div>
+
+          <div
+            class="card is-collapsible"
+            data-collapsible
+            data-collapsible-id="today-timer"
+          >
+            <h3 class="text-xl font-semibold text-gray-900 dark:text-gray-100">
+              <button
+                type="button"
+                class="card-toggle"
+                data-collapsible-trigger
+                aria-expanded="true"
+                aria-controls="today-timer-content"
+              >
+                <span>Pomodoro timer</span>
+                <svg
+                  class="chev"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M6 8l4 4 4-4"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </button>
+            </h3>
+            <div
+              id="today-timer-content"
+              class="card-body space-y-4"
+              data-collapsible-content
+            >
+              <p class="text-sm text-gray-600 dark:text-gray-300">
+                Switch modes, start a session, and log focus time to the active task.
+              </p>
+              <div class="flex flex-wrap gap-2">
+                <button type="button" class="btn btn-blue" data-timer-mode="focus">Focus</button>
+                <button type="button" class="btn btn-gray" data-timer-mode="shortBreak">Short break</button>
+                <button type="button" class="btn btn-gray" data-timer-mode="longBreak">Long break</button>
+              </div>
+              <div class="mt-2">
+                <div class="flex items-end gap-3">
+                  <span
+                    id="timerDisplay"
+                    class="text-5xl font-bold text-gray-900 dark:text-gray-100 leading-none"
+                    >25:00</span
+                  >
+                  <span class="uppercase text-xs tracking-wide text-gray-500 dark:text-gray-400">
+                    <span id="timerMode">Focus</span>
+                  </span>
+                </div>
+                <p class="text-sm text-gray-600 dark:text-gray-300 mt-3">
+                  Active task: <span id="timerActiveTask" class="font-semibold">None</span>
+                </p>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <button type="button" class="btn btn-blue" data-timer-control="start">Start</button>
+                <button type="button" class="btn btn-gray" data-timer-control="pause">Pause</button>
+                <button type="button" class="btn btn-gray" data-timer-control="reset">Reset</button>
+              </div>
+              <p id="timerStatus" class="text-sm text-gray-600 dark:text-gray-300"></p>
+              <audio id="timerAlarm" src="assets/audio/pomodoro-chime.wav" preload="auto"></audio>
+            </div>
+          </div>
+
+          <div
+            class="card is-collapsible"
+            data-collapsible
+            data-collapsible-id="today-summary"
+          >
+            <h3 class="text-xl font-semibold text-gray-900 dark:text-gray-100">
+              <button
+                type="button"
+                class="card-toggle"
+                data-collapsible-trigger
+                aria-expanded="true"
+                aria-controls="today-summary-content"
+              >
+                <span>Today summary</span>
+                <svg
+                  class="chev"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M6 8l4 4 4-4"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </button>
+            </h3>
+            <div
+              id="today-summary-content"
+              class="card-body space-y-3"
+              data-collapsible-content
+            >
+              <p class="text-sm text-gray-600 dark:text-gray-300">
+                Review today's plan versus what you completed.
+              </p>
+              <div id="todaySummary" class="space-y-2"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="week" class="content-section">
+        <h2 class="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-6">This week</h2>
+        <div class="card">
+          <h3 class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Past 7 days</h3>
+          <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">
+            Daily planned versus completed pomodoros for the last week.
+          </p>
+          <div id="weekSummary" class="space-y-3"></div>
+        </div>
+      </div>
+
+      <div id="welcome" class="content-section" data-first-time>
         <h2 class="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-6">
-          Welcome to PWA Template
+          Welcome to TaskTrack
         </h2>
         <div class="card" data-first-time>
           <h3 class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
             Get started
           </h3>
           <p class="text-gray-700 dark:text-gray-300 mb-4">
-            PWA Template is a lightweight Progressive Web App that keeps your data on this device. Adjust the appearance, manage updates, and stay informed about new releases from the Settings page.
+            TaskTrack keeps your data on this device. Map out today's work, link focus sessions to a task, and keep an eye on your week at a glance.
           </p>
           <ul class="list-disc pl-5 space-y-2 text-gray-700 dark:text-gray-300 mb-6">
-            <li>Install PWA Template as a PWA to access it like a native app.</li>
-            <li>Use dark mode or alternate themes to match your environment.</li>
-            <li>Review the changelog after each update to see what's new.</li>
+            <li>Capture today's tasks with planned pomodoro counts.</li>
+            <li>Start the timer, pick an active task, and let completed sessions auto-log.</li>
+            <li>Check the This Week view for a quick recap of your focus streaks.</li>
           </ul>
           <div class="flex flex-wrap gap-3">
             <button class="btn btn-blue" data-action="go-settings">
@@ -228,7 +518,7 @@
             data-collapsible-content
           >
             <p class="text-sm text-gray-700 dark:text-gray-300">
-              PWA Template version
+              TaskTrack version
               <span
                 data-app-version
                 class="font-semibold text-gray-900 dark:text-gray-100"
@@ -335,6 +625,119 @@
         <div
           class="card is-collapsible"
           data-collapsible
+          data-collapsible-id="settings-timer"
+        >
+          <h3 class="text-xl font-semibold text-gray-900 dark:text-gray-100">
+            <button
+              type="button"
+              class="card-toggle"
+              data-collapsible-trigger
+              aria-expanded="true"
+              aria-controls="settings-timer-content"
+            >
+              <span>Timer settings</span>
+              <svg
+                class="chev"
+                width="20"
+                height="20"
+                viewBox="0 0 20 20"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M6 8l4 4 4-4"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </button>
+          </h3>
+          <div
+            id="settings-timer-content"
+            class="card-body space-y-6"
+            data-collapsible-content
+          >
+            <p class="text-gray-700 dark:text-gray-300 text-sm">
+              Customize pomodoro lengths and how many focus sessions you want before a long break. Changes apply to new sessions.
+            </p>
+            <form id="timerSettingsForm" class="grid gap-4 md:grid-cols-2">
+              <div>
+                <label for="focusMinutes" class="form-label">Focus length (minutes)</label>
+                <input
+                  id="focusMinutes"
+                  type="number"
+                  min="1"
+                  max="180"
+                  step="1"
+                  class="input-field"
+                  required
+                />
+              </div>
+              <div>
+                <label for="shortBreakMinutes" class="form-label">Short break length (minutes)</label>
+                <input
+                  id="shortBreakMinutes"
+                  type="number"
+                  min="1"
+                  max="60"
+                  step="1"
+                  class="input-field"
+                  required
+                />
+              </div>
+              <div>
+                <label for="longBreakMinutes" class="form-label">Long break length (minutes)</label>
+                <input
+                  id="longBreakMinutes"
+                  type="number"
+                  min="1"
+                  max="120"
+                  step="1"
+                  class="input-field"
+                  required
+                />
+              </div>
+              <div>
+                <label for="sessionsBeforeLongBreak" class="form-label">Focus sessions before long break</label>
+                <input
+                  id="sessionsBeforeLongBreak"
+                  type="number"
+                  min="1"
+                  max="12"
+                  step="1"
+                  class="input-field"
+                  required
+                />
+              </div>
+              <div class="md:col-span-2">
+                <label for="alarmTone" class="form-label">Notification tone</label>
+                <div class="flex flex-col gap-3 sm:max-w-sm">
+                  <select id="alarmTone" class="input-field">
+                    <option value="chime">Soft chime (default)</option>
+                    <option value="bell">Long ringing bell</option>
+                    <option value="beeps">Series of beeps</option>
+                  </select>
+                  <button type="button" class="btn btn-gray w-full" id="alarmTonePreview">
+                    Preview tone
+                  </button>
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                  Plays when a session finishes. Applies immediately.
+                </p>
+              </div>
+              <div class="md:col-span-2 flex flex-wrap gap-3">
+                <button type="submit" class="btn btn-blue" id="timerSettingsSave">Save timer settings</button>
+                <button type="button" class="btn btn-gray" id="timerSettingsReset">Reset to defaults</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div
+          class="card is-collapsible"
+          data-collapsible
           data-collapsible-id="settings-reset"
         >
           <h3 class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">
@@ -418,7 +821,7 @@
             data-collapsible-content
           >
             <p class="text-sm text-gray-700 dark:text-gray-300">
-              The most recent PWA Template updates appear here.
+              The latest TaskTrack updates appear here.
             </p>
             <div data-changelog-list class="space-y-4"></div>
             <p

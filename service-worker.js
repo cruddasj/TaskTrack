@@ -2,7 +2,7 @@ const APP_VERSION = "0.0.0";
 const CACHE_VERSION = APP_VERSION && APP_VERSION.endsWith("-dev")
   ? "dev"
   : APP_VERSION;
-const CACHE_NAME = `PWA Template-cache-${CACHE_VERSION}`;
+const CACHE_NAME = `TaskTrackPomodoro-cache-${CACHE_VERSION}`;
 
 const CORE_ASSETS = [
   "./",
@@ -16,7 +16,10 @@ const CORE_ASSETS = [
   "./assets/icons/icon-192-maskable.png",
   "./assets/icons/icon-256-maskable.png",
   "./assets/icons/icon-384-maskable.png",
-  "./assets/icons/icon-512-maskable.png"
+  "./assets/icons/icon-512-maskable.png",
+  "./assets/audio/pomodoro-chime.wav",
+  "./assets/audio/long-bell.wav",
+  "./assets/audio/beeps.wav"
 ];
 
 self.addEventListener("install", (event) => {
