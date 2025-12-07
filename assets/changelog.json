@@ -1,5 +1,15 @@
 [
   {
+    "version": "0.0.1",
+    "date": "2025-12-07",
+    "changes": [
+      "Add daily planner with editable tasks, active task selection, and pomodoro counts.",
+      "Introduce a focus/short/long pomodoro timer with alarm and automatic task increments.",
+      "Show today summaries and last-7-days pomodoro totals stored by date.",
+      "Refresh branding with a stopwatch logo and unique storage keys for this app."
+    ]
+  },
+  {
     "version": "0.0.0",
     "date": "2025-10-11",
     "changes": [
