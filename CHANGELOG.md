@@ -2,6 +2,11 @@
 
 All notable changes to TaskTrack will be documented in this file. This project adheres to a manual release process; update both this file and `assets/changelog.json` when shipping new versions so the in-app update summary stays accurate.
 
+## [0.0.3] - 2025-12-07
+- Add Android-friendly timer notifications with vibration and on-device alerts when a focus or break ends.
+- Make the pomodoro alarm more reliable on mobile by warming audio playback when the timer starts.
+- Allow uploading a custom notification tone from Settings alongside the built-in chime options.
+
 ## [0.0.2] - 2025-12-07
 - Let tasks declare which pomodoro round they belong to, with quick actions to move them forward and round labels in the UI.
 - Prompt for confirmation when a focus round ends and automatically carry unfinished work to the next round instead of silently logging it.

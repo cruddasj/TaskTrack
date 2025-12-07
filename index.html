@@ -736,10 +736,21 @@
                     <option value="chime">Soft chime (default)</option>
                     <option value="bell">Long ringing bell</option>
                     <option value="beeps">Series of beeps</option>
+                    <option value="custom">Custom upload</option>
                   </select>
                   <button type="button" class="btn btn-gray w-full" id="alarmTonePreview">
                     Preview tone
                   </button>
+                  <label class="form-label" for="customAlarmFile">Upload custom tone</label>
+                  <input
+                    id="customAlarmFile"
+                    type="file"
+                    accept="audio/*"
+                    class="input-field"
+                  />
+                  <p id="customToneHelper" class="text-xs text-gray-500 dark:text-gray-400">
+                    Upload a small audio file (2MB max) to use as your notification tone.
+                  </p>
                 </div>
                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
                   Plays when a session finishes. Applies immediately.
