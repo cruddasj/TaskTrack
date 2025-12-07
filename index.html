@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="en" class="min-h-full bg-gray-100 dark:bg-gray-900">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PWA Template</title>
+    <meta name="theme-color" content="#111827" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="assets/icons/app-logo.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="assets/icons/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="120x120" href="assets/icons/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="76x76" href="assets/icons/icon-192.png" />
+
+    <!-- Inter font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Font Awesome for icons -->
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+      rel="stylesheet"
+    />
+
+    <!-- App styles -->
+    <link rel="stylesheet" href="assets/styles.css" />
+  </head>
+
+  <body
+    class="min-h-screen flex flex-col md:flex-row bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200"
+    style="min-height: 100vh; min-height: 100dvh;"
+  >
+    <!-- SVG sprite: app logo + small icons -->
+    <svg
+      aria-hidden="true"
+      width="0"
+      height="0"
+      style="position: absolute"
+      xmlns="http://www.w3.org/2000/svg"
+      xmlns:xlink="http://www.w3.org/1999/xlink"
+    >
+      <defs>
+        <linearGradient id="app-logo-gradient" x1="50%" y1="0%" x2="50%" y2="100%">
+          <stop offset="0%" stop-color="hsl(115, 69%, 60%)" stop-opacity="1"></stop>
+          <stop offset="100%" stop-color="hsl(205, 69%, 80%)" stop-opacity="1"></stop>
+        </linearGradient>
+        <symbol id="app-logo" viewBox="0 0 800 800">
+          <g stroke="url(#app-logo-gradient)" fill="none" stroke-linecap="round">
+            <circle r="320" cx="400" cy="400" stroke-width="11" stroke-dasharray="1709 2011" transform="rotate(360, 400, 400)"></circle>
+            <circle r="304" cx="400" cy="400" stroke-width="11" stroke-dasharray="1538 1910" transform="rotate(341, 400, 400)"></circle>
+            <circle r="288" cx="400" cy="400" stroke-width="11" stroke-dasharray="1376 1810" transform="rotate(322, 400, 400)"></circle>
+            <circle r="272" cx="400" cy="400" stroke-width="11" stroke-dasharray="1223 1709" transform="rotate(303, 400, 400)"></circle>
+            <circle r="256" cx="400" cy="400" stroke-width="11" stroke-dasharray="1079 1608" transform="rotate(284, 400, 400)"></circle>
+            <circle r="240" cx="400" cy="400" stroke-width="11" stroke-dasharray="944 1508" transform="rotate(265, 400, 400)"></circle>
+            <circle r="224" cx="400" cy="400" stroke-width="11" stroke-dasharray="819 1407" transform="rotate(246, 400, 400)"></circle>
+            <circle r="208" cx="400" cy="400" stroke-width="11" stroke-dasharray="702 1307" transform="rotate(227, 400, 400)"></circle>
+            <circle r="192" cx="400" cy="400" stroke-width="11" stroke-dasharray="594 1206" transform="rotate(208, 400, 400)"></circle>
+            <circle r="176" cx="400" cy="400" stroke-width="11" stroke-dasharray="495 1106" transform="rotate(189, 400, 400)"></circle>
+            <circle r="160" cx="400" cy="400" stroke-width="11" stroke-dasharray="405 1005" transform="rotate(171, 400, 400)"></circle>
+            <circle r="144" cx="400" cy="400" stroke-width="11" stroke-dasharray="324 905" transform="rotate(152, 400, 400)"></circle>
+            <circle r="128" cx="400" cy="400" stroke-width="11" stroke-dasharray="252 804" transform="rotate(133, 400, 400)"></circle>
+            <circle r="112" cx="400" cy="400" stroke-width="11" stroke-dasharray="189 704" transform="rotate(114, 400, 400)"></circle>
+            <circle r="96" cx="400" cy="400" stroke-width="11" stroke-dasharray="135 603" transform="rotate(95, 400, 400)"></circle>
+            <circle r="80" cx="400" cy="400" stroke-width="11" stroke-dasharray="90 503" transform="rotate(76, 400, 400)"></circle>
+            <circle r="64" cx="400" cy="400" stroke-width="11" stroke-dasharray="54 402" transform="rotate(57, 400, 400)"></circle>
+            <circle r="48" cx="400" cy="400" stroke-width="11" stroke-dasharray="27 302" transform="rotate(38, 400, 400)"></circle>
+            <circle r="32" cx="400" cy="400" stroke-width="11" stroke-dasharray="9 201" transform="rotate(19, 400, 400)"></circle>
+            <circle r="16" cx="400" cy="400" stroke-width="11" stroke-dasharray="0 101"></circle>
+          </g>
+        </symbol>
+      </defs>
+    </svg>
+
+    <!-- Mobile Header -->
+    <div
+      id="mobileHeader"
+      class="md:hidden flex items-center justify-start gap-4 p-4 bg-white dark:bg-gray-800 shadow-md"
+    >
+      <button id="menu-toggle" class="text-gray-900 dark:text-gray-100">
+        <svg
+          class="w-6 h-6"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M4 6h16M4 12h16m-7 6h7"
+          />
+        </svg>
+      </button>
+      <div class="flex items-center">
+        <svg class="nav-logo nav-logo--mobile mr-2 text-gray-800 dark:text-white">
+          <use href="#app-logo" xlink:href="#app-logo" />
+        </svg>
+        <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100">
+          PWA Template
+        </h1>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div
+      id="sidebar"
+      class="fixed inset-y-0 left-0 w-64 bg-white dark:bg-gray-800 p-6 flex flex-col items-center shadow-lg border-r border-gray-200 dark:border-gray-700 overflow-y-auto md:overflow-visible transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 ease-in-out z-40 md:min-h-screen"
+      style="min-height: 100vh; min-height: 100dvh;"
+    >
+      <div class="mb-8 w-full">
+        <button
+          id="brandHome"
+          class="flex flex-col items-center w-full cursor-pointer pt-6"
+        >
+          <svg
+            id="brandLogo"
+            class="nav-logo text-gray-800 dark:text-white mb-1 -mt-8"
+          >
+            <use href="#app-logo" xlink:href="#app-logo" />
+          </svg>
+          <h1
+            id="brandTitle"
+            class="text-2xl leading-none font-bold text-center text-gray-900 dark:text-gray-100"
+          >
+            PWA Template
+          </h1>
+        </button>
+      </div>
+
+      <div class="mb-8">
+        <label class="dark-mode-toggle">
+          <span class="mr-3 font-semibold text-gray-500 dark:text-gray-400"
+            >Dark Mode</span
+          >
+          <input type="checkbox" id="themeToggle" class="peer" />
+          <span class="toggle-track"><span class="toggle-thumb"></span></span>
+        </label>
+      </div>
+
+      <nav class="w-full">
+        <button class="nav-btn active-nav-button" data-target="welcome" data-first-time>
+          <span class="flex items-center">
+            <i class="fa-solid fa-circle-info h-5 w-5 mr-3"></i>
+            Welcome
+          </span>
+        </button>
+        <button class="nav-btn" data-target="settings">
+          <span class="flex items-center">
+            <i class="fa-solid fa-sliders-h h-5 w-5 mr-3"></i>
+            Settings
+          </span>
+        </button>
+      </nav>
+    </div>
+
+    <div
+      id="overlay"
+      class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden md:hidden"
+    ></div>
+
+    <main class="flex-1 p-4 md:p-8 overflow-y-auto md:overflow-y-visible overflow-x-hidden">
+      <div id="welcome" class="content-section active" data-first-time>
+        <h2 class="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-6">
+          Welcome to PWA Template
+        </h2>
+        <div class="card" data-first-time>
+          <h3 class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
+            Get started
+          </h3>
+          <p class="text-gray-700 dark:text-gray-300 mb-4">
+            PWA Template is a lightweight Progressive Web App that keeps your data on this device. Adjust the appearance, manage updates, and stay informed about new releases from the Settings page.
+          </p>
+          <ul class="list-disc pl-5 space-y-2 text-gray-700 dark:text-gray-300 mb-6">
+            <li>Install PWA Template as a PWA to access it like a native app.</li>
+            <li>Use dark mode or alternate themes to match your environment.</li>
+            <li>Review the changelog after each update to see what's new.</li>
+          </ul>
+          <div class="flex flex-wrap gap-3">
+            <button class="btn btn-blue" data-action="go-settings">
+              Open Settings
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div id="settings" class="content-section">
+        <h2 class="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-6">
+          Settings
+        </h2>
+        <div
+          class="card is-collapsible"
+          data-collapsible
+          data-collapsible-id="settings-version"
+        >
+          <h3 class="text-xl font-semibold text-gray-900 dark:text-gray-100">
+            <button
+              type="button"
+              class="card-toggle"
+              data-collapsible-trigger
+              aria-expanded="true"
+              aria-controls="settings-version-content"
+            >
+              <span>Version</span>
+              <svg
+                class="chev"
+                width="20"
+                height="20"
+                viewBox="0 0 20 20"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M6 8l4 4 4-4"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </button>
+          </h3>
+          <div
+            id="settings-version-content"
+            class="card-body space-y-4"
+            data-collapsible-content
+          >
+            <p class="text-sm text-gray-700 dark:text-gray-300">
+              PWA Template version
+              <span
+                data-app-version
+                class="font-semibold text-gray-900 dark:text-gray-100"
+                >dev</span
+              >
+            </p>
+            <div class="flex flex-col gap-3 sm:items-start">
+              <button
+                class="btn btn-blue w-full sm:w-auto"
+                data-action="update-app"
+                type="button"
+              >
+                Check for updates
+              </button>
+              <p class="text-xs text-gray-500 dark:text-gray-400">
+                Installs the latest version without clearing your saved preferences.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="card is-collapsible"
+          data-collapsible
+          data-collapsible-id="settings-layout"
+        >
+          <h3 class="text-xl font-semibold text-gray-900 dark:text-gray-100">
+            <button
+              type="button"
+              class="card-toggle"
+              data-collapsible-trigger
+              aria-expanded="true"
+              aria-controls="settings-layout-content"
+            >
+              <span>Layout Settings</span>
+              <svg
+                class="chev"
+                width="20"
+                height="20"
+                viewBox="0 0 20 20"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M6 8l4 4 4-4"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </button>
+          </h3>
+          <div
+            id="settings-layout-content"
+            class="card-body space-y-6"
+            data-collapsible-content
+          >
+            <div>
+              <p class="text-gray-700 dark:text-gray-300 text-sm mb-4">
+                Choose a look and feel. Your choice is saved for the next visit.
+              </p>
+              <div class="max-w-xs">
+                <label for="themeSelect" class="form-label">Theme</label>
+                <select id="themeSelect" class="input-field">
+                  <option value="default">Default</option>
+                  <option value="inverted">Inverted</option>
+                  <option value="glass">Glass</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <p class="text-gray-700 dark:text-gray-300 text-sm mb-4">
+                Decide whether the navigation menu stays fixed at the top while scrolling on mobile devices.
+              </p>
+              <label class="dark-mode-toggle">
+                <span class="mr-3 font-semibold text-gray-500 dark:text-gray-400"
+                  >Keep navigation menu fixed on mobile</span
+                >
+                <input
+                  type="checkbox"
+                  id="mobileNavStickyToggle"
+                  class="peer"
+                  checked
+                />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
+            <div>
+              <p class="text-gray-700 dark:text-gray-300 text-sm mb-4">
+                Show or hide welcome tips once you're familiar with the app.
+              </p>
+              <label class="dark-mode-toggle">
+                <span class="mr-3 font-semibold text-gray-500 dark:text-gray-400"
+                  >Show first-time use guidance</span
+                >
+                <input type="checkbox" id="welcomeToggle" class="peer" />
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="card is-collapsible"
+          data-collapsible
+          data-collapsible-id="settings-reset"
+        >
+          <h3 class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">
+            <button
+              type="button"
+              class="card-toggle"
+              data-collapsible-trigger
+              aria-expanded="true"
+              aria-controls="settings-reset-content"
+            >
+              <span>Reset App</span>
+              <svg
+                class="chev"
+                width="20"
+                height="20"
+                viewBox="0 0 20 20"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M6 8l4 4 4-4"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </button>
+          </h3>
+          <div
+            id="settings-reset-content"
+            class="card-body space-y-4"
+            data-collapsible-content
+          >
+            <p class="text-gray-700 dark:text-gray-300 text-sm">
+              Clear all locally stored data and restart the app.
+            </p>
+            <button class="btn btn-red flex items-center" data-action="clear-data">
+              <i class="fa-solid fa-trash mr-2"></i>
+              Clear Data
+            </button>
+          </div>
+        </div>
+
+        <div
+          id="changelogCard"
+          class="card is-collapsible"
+          data-collapsible
+          data-collapsible-id="settings-changelog"
+        >
+          <h3 class="text-xl font-semibold text-gray-900 dark:text-gray-100">
+            <button
+              type="button"
+              class="card-toggle"
+              data-collapsible-trigger
+              aria-expanded="true"
+              aria-controls="settings-changelog-content"
+            >
+              <span>Changelog</span>
+              <svg
+                class="chev"
+                width="20"
+                height="20"
+                viewBox="0 0 20 20"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M6 8l4 4 4-4"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </button>
+          </h3>
+          <div
+            id="settings-changelog-content"
+            class="card-body space-y-4"
+            data-collapsible-content
+          >
+            <p class="text-sm text-gray-700 dark:text-gray-300">
+              The most recent PWA Template updates appear here.
+            </p>
+            <div data-changelog-list class="space-y-4"></div>
+            <p
+              data-changelog-empty
+              class="text-sm text-gray-500 dark:text-gray-400 hidden"
+            >
+              Recent release notes will appear here after the next update.
+            </p>
+            <p
+              data-changelog-error
+              class="text-sm text-red-600 dark:text-red-400 hidden"
+            >
+              We couldn't load the changelog. Please check your connection and try again.
+            </p>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <div
+      id="modal"
+      class="modal-overlay modal-hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-hidden="true"
+    >
+      <div class="modal-panel">
+        <button
+          type="button"
+          class="btn-icon absolute top-3 right-3 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+          data-action="close-modal"
+          aria-label="Close dialog"
+        >
+          <span class="sr-only">Close</span>
+          <i class="fa-solid fa-xmark text-lg" aria-hidden="true"></i>
+        </button>
+        <div id="modal-body" class="space-y-4"></div>
+      </div>
+    </div>
+
+    <script src="assets/js/app.js"></script>
+  </body>
+</html>

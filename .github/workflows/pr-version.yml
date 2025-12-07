@@ -1,0 +1,127 @@
+name: Prepare release version
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+permissions:
+  contents: write
+
+jobs:
+  bump-version:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.head_ref }}
+          repository: ${{ github.repository }}
+      - name: Determine next version
+        id: version
+        run: |
+          version=$(node <<'NODE'
+          const fs = require('fs');
+          const { execSync } = require('child_process');
+
+          function parseBase(value, allowPatchDefault = false) {
+            if (!value || typeof value !== 'string') return null;
+            const cleaned = value.trim().replace(/^v/, '');
+            const match = cleaned.match(/^(\d+)(?:\.(\d+))?(?:\.(\d+))?/);
+            if (!match) return null;
+            const major = Number(match[1]);
+            const minor = match[2] !== undefined ? Number(match[2]) : 0;
+            let patch;
+            if (match[3] !== undefined) {
+              patch = Number(match[3]);
+            } else {
+              patch = allowPatchDefault ? 0 : -1;
+            }
+            return { major, minor, patch };
+          }
+
+          function compare(a, b) {
+            if (a.major !== b.major) return a.major - b.major;
+            if (a.minor !== b.minor) return a.minor - b.minor;
+            return a.patch - b.patch;
+          }
+
+          function getLatestTag() {
+            try {
+              const output = execSync("git tag --list 'v*' --sort=-v:refname | head -n 1", {
+                encoding: 'utf8',
+              }).trim();
+              return output || null;
+            } catch (error) {
+              return null;
+            }
+          }
+
+          let base = parseBase(getLatestTag(), true);
+          if (!base) {
+            let seed = null;
+            try {
+              seed = fs.readFileSync('VERSION_BASE', 'utf8');
+            } catch (_) {}
+            base = parseBase(seed) || { major: 1, minor: 0, patch: -1 };
+          }
+
+          try {
+            const raw = fs.readFileSync('assets/version.json', 'utf8');
+            const current = parseBase(JSON.parse(raw).version, true);
+            if (current && compare(current, base) > 0) {
+              base = current;
+            }
+          } catch (_) {}
+
+          const next = { ...base, patch: base.patch + 1 };
+          const version = `${next.major}.${next.minor}.${next.patch}`;
+          process.stdout.write(version);
+          NODE
+          )
+          echo "Next version: $version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+        shell: bash
+      - name: Update version files
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if [ -z "$VERSION" ]; then
+            echo "Version not determined"
+            exit 1
+          fi
+          node <<'NODE'
+          const fs = require('fs');
+          const version = process.env.VERSION;
+          if (!version) {
+            throw new Error('Missing VERSION');
+          }
+
+          fs.writeFileSync('assets/version.json', JSON.stringify({ version }, null, 2) + '\n');
+
+          const swPath = 'service-worker.js';
+          const source = fs.readFileSync(swPath, 'utf8');
+          const updated = source.replace(/const APP_VERSION = "[^"]*";/, `const APP_VERSION = "${version}";`);
+          if (source !== updated) {
+            fs.writeFileSync(swPath, updated);
+          } else if (!source.includes(`const APP_VERSION = "${version}";`)) {
+            throw new Error('Failed to update service worker version constant');
+          }
+          NODE
+      - name: Commit version bump
+        run: |
+          if git diff --quiet; then
+            echo "No version changes detected"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/version.json service-worker.js
+          if git diff --cached --quiet; then
+            echo "No staged changes"
+            exit 0
+          fi
+          version="${{ steps.version.outputs.version }}"
+          git commit -m "chore: bump version to v${version}"
+          git push origin HEAD:${{ github.head_ref }}

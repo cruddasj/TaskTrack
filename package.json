@@ -1,0 +1,20 @@
+{
+  "name": "PWA Template",
+  "version": "0.0.0",
+  "description": "PWA Template is a personal wealth projection and planning tool built as a single-page application. It helps you capture assets and goals, run forecasts, explore portfolio insights, and maintain historical snapshots.",
+  "main": "service-worker.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build:css": "tailwindcss -i ./src/styles.css -o ./assets/styles.css --minify",
+    "watch:css": "tailwindcss -i ./src/styles.css -o ./assets/styles.css --watch",
+    "build:icons": "node ./scripts/generate-icons.mjs"
+  },
+  "keywords": [],
+  "author": "James Cruddas",
+  "type": "commonjs",
+  "homepage": "https://github.com/cruddasj/PWA Template#readme",
+  "devDependencies": {
+    "sharp": "^0.33.4",
+    "tailwindcss": "^3.4.14"
+  }
+}

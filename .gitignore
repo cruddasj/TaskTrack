@@ -1,0 +1,34 @@
+### Node & tooling
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+### OS / editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+### Env / caches / build outputs (generic)
+.env
+.env.*.local
+.cache/
+.parcel-cache/
+.sass-cache/
+coverage/
+dist/
+tmp/
+temp/
+*.map
+
+### Project-specific
+# Temporary file created during CSS extraction; not used.
+src_extracted_tailwind.css
+
+# Keep built CSS committed for GitHub Pages deployment
+# DO NOT ignore: assets/styles.css
+
