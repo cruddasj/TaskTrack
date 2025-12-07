@@ -2,6 +2,9 @@
 
 All notable changes to TaskTrack will be documented in this file. This project adheres to a manual release process; update both this file and `assets/changelog.json` when shipping new versions so the in-app update summary stays accurate.
 
+## [0.0.4] - 2025-12-07
+- Add a Debug tools toggle that replays timer-completion notifications every 10 seconds to test Android PWA installs.
+
 ## [0.0.3] - 2025-12-07
 - Add Android-friendly timer notifications with vibration and on-device alerts when a focus or break ends.
 - Make the pomodoro alarm more reliable on mobile by warming audio playback when the timer starts.

@@ -767,6 +767,60 @@
         <div
           class="card is-collapsible"
           data-collapsible
+          data-collapsible-id="settings-debug"
+        >
+          <h3 class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">
+            <button
+              type="button"
+              class="card-toggle"
+              data-collapsible-trigger
+              aria-expanded="true"
+              aria-controls="settings-debug-content"
+            >
+              <span>Debug tools</span>
+              <svg
+                class="chev"
+                width="20"
+                height="20"
+                viewBox="0 0 20 20"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M6 8l4 4 4-4"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </button>
+          </h3>
+          <div
+            id="settings-debug-content"
+            class="card-body space-y-4"
+            data-collapsible-content
+          >
+            <p class="text-gray-700 dark:text-gray-300 text-sm">
+              Send a test notification every 10 seconds to mimic timer completion alerts. Helpful when checking Android PWA
+              installs.
+            </p>
+            <label class="dark-mode-toggle">
+              <span class="mr-3 font-semibold text-gray-500 dark:text-gray-400">
+                Enable repeating test notifications
+              </span>
+              <input type="checkbox" id="debugNotificationToggle" class="peer" />
+              <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            </label>
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+              Uses the same title, body, and vibration pattern as the alert that fires when a pomodoro finishes.
+            </p>
+          </div>
+        </div>
+
+        <div
+          class="card is-collapsible"
+          data-collapsible
           data-collapsible-id="settings-reset"
         >
           <h3 class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">

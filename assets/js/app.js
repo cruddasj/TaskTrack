@@ -15,6 +15,7 @@
     timerSettings: `${STORAGE_PREFIX}-timerSettings`,
     alarmSound: `${STORAGE_PREFIX}-alarmSound`,
     customAlarm: `${STORAGE_PREFIX}-customAlarm`,
+    debugNotifications: `${STORAGE_PREFIX}-debugNotifications`,
   };
 
   const PERSISTED_KEYS = [
@@ -55,6 +56,7 @@
   };
 
   const CUSTOM_ALARM_MAX_BYTES = 2 * 1024 * 1024;
+  const DEBUG_NOTIFICATION_INTERVAL_MS = 10_000;
 
   const TASK_DEFAULTS = {
     planned: 1,
@@ -65,6 +67,7 @@
   };
 
   let timerIntervalId = null;
+  let debugNotificationIntervalId = null;
   let editingTaskId = null;
   let appData = null;
   let timerState = null;
@@ -322,6 +325,31 @@
     } catch (error) {
       console.error('Notification display failed', error);
     }
+  };
+
+  const stopDebugNotifications = () => {
+    if (debugNotificationIntervalId) {
+      clearInterval(debugNotificationIntervalId);
+      debugNotificationIntervalId = null;
+    }
+  };
+
+  const applyDebugNotifications = (enabled) => {
+    const toggle = document.getElementById('debugNotificationToggle');
+    if (toggle) toggle.checked = enabled;
+
+    if (!enabled) {
+      stopDebugNotifications();
+      safeSet(LS_KEYS.debugNotifications, '0');
+      return;
+    }
+
+    safeSet(LS_KEYS.debugNotifications, '1');
+    stopDebugNotifications();
+    debugNotificationIntervalId = window.setInterval(() => {
+      const payload = getCompletionNotificationContent({ mode: timerState?.mode });
+      void showTimerNotification(payload);
+    }, DEBUG_NOTIFICATION_INTERVAL_MS);
   };
 
   const renderCustomAlarmHelper = () => {
@@ -595,6 +623,26 @@
     if (persist) persistTimerState();
   };
 
+  const getNextBreakMode = () => {
+    const nextStreak = (timerState?.focusStreak || 0) + 1;
+    return nextStreak >= timerConfig.sessionsBeforeLongBreak ? 'longBreak' : 'shortBreak';
+  };
+
+  const getCompletionNotificationContent = ({ mode, nextMode } = {}) => {
+    const effectiveMode = mode || timerState?.mode || 'focus';
+    if (effectiveMode === 'focus') {
+      const breakMode = nextMode || getNextBreakMode();
+      return {
+        title: 'Focus complete',
+        body: `Starting your ${breakMode === 'longBreak' ? 'long' : 'short'} break.`,
+      };
+    }
+    return {
+      title: 'Break finished',
+      body: 'Time to start your next focus session.',
+    };
+  };
+
   const handleTimerComplete = async () => {
     stopTimerTick();
     timerState.isRunning = false;
@@ -635,10 +683,7 @@
       const nextMode = reachedLongBreak ? 'longBreak' : 'shortBreak';
       resetTimer({ mode: nextMode, persist: false });
       startTimer({ clearStatus: false });
-      void showTimerNotification({
-        title: 'Focus complete',
-        body: `Starting your ${nextMode === 'longBreak' ? 'long' : 'short'} break.`,
-      });
+      void showTimerNotification(getCompletionNotificationContent({ mode: timerState.mode, nextMode }));
       setTimerStatus(
         activeTask
           ? `Focus complete! Starting a ${nextMode === 'longBreak' ? 'long' : 'short'} break.`
@@ -653,10 +698,7 @@
     // Break finished -> go back to focus
     resetTimer({ mode: 'focus', persist: false });
     startTimer({ clearStatus: false });
-    void showTimerNotification({
-      title: 'Break finished',
-      body: 'Time to start your next focus session.',
-    });
+    void showTimerNotification(getCompletionNotificationContent({ mode: timerState.mode }));
     setTimerStatus('Break finished. Starting the next focus session.');
   };
 
@@ -1761,6 +1803,15 @@
     if (welcomeToggle) {
       welcomeToggle.addEventListener('change', (event) => {
         applyFirstTimeHidden(!event.target.checked);
+      });
+    }
+
+    const storedDebugNotifications = safeGet(LS_KEYS.debugNotifications) === '1';
+    applyDebugNotifications(storedDebugNotifications);
+    const debugNotificationToggle = $('#debugNotificationToggle');
+    if (debugNotificationToggle) {
+      debugNotificationToggle.addEventListener('change', (event) => {
+        applyDebugNotifications(event.target.checked);
       });
     }
 
