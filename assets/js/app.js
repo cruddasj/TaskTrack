@@ -1,14 +1,70 @@
 'use strict';
 
 (function () {
+  const STORAGE_PREFIX = 'time-tracker-pomodoro-v1';
+  const APP_DATA_KEY = STORAGE_PREFIX;
+  const TIMER_STORAGE_KEY = `${STORAGE_PREFIX}-timer-state`;
+
   const LS_KEYS = {
-    theme: 'themeDark',
-    themeChoice: 'themeChoice',
-    welcomeHidden: 'welcomeDisabled',
-    mobileNavSticky: 'mobileNavSticky',
-    view: 'activeView',
-    collapsible: 'collapsedCards',
+    theme: `${STORAGE_PREFIX}-themeDark`,
+    themeChoice: `${STORAGE_PREFIX}-themeChoice`,
+    welcomeHidden: `${STORAGE_PREFIX}-welcomeDisabled`,
+    mobileNavSticky: `${STORAGE_PREFIX}-mobileNavSticky`,
+    view: `${STORAGE_PREFIX}-activeView`,
+    collapsible: `${STORAGE_PREFIX}-collapsedCards`,
+    timerSettings: `${STORAGE_PREFIX}-timerSettings`,
+    alarmSound: `${STORAGE_PREFIX}-alarmSound`,
   };
+
+  const PERSISTED_KEYS = [
+    APP_DATA_KEY,
+    TIMER_STORAGE_KEY,
+    ...Object.values(LS_KEYS),
+  ];
+
+  const FALLBACK_DURATIONS = {
+    focus: 25 * 60,
+    shortBreak: 5 * 60,
+    longBreak: 15 * 60,
+  };
+
+  const DEFAULT_TIMER_CONFIG = {
+    focusMinutes: 25,
+    shortBreakMinutes: 5,
+    longBreakMinutes: 15,
+    sessionsBeforeLongBreak: 4,
+  };
+
+  const ALARM_SOUNDS = {
+    chime: {
+      id: 'chime',
+      label: 'Soft chime',
+      src: 'assets/audio/pomodoro-chime.wav',
+    },
+    bell: {
+      id: 'bell',
+      label: 'Long ringing bell',
+      src: 'assets/audio/long-bell.wav',
+    },
+    beeps: {
+      id: 'beeps',
+      label: 'Series of beeps',
+      src: 'assets/audio/beeps.wav',
+    },
+  };
+
+  const TASK_DEFAULTS = {
+    planned: 1,
+    completed: 0,
+    description: '',
+    done: false,
+  };
+
+  let timerIntervalId = null;
+  let editingTaskId = null;
+  let appData = null;
+  let timerState = null;
+  let timerConfig = { ...DEFAULT_TIMER_CONFIG };
 
   const root = document.documentElement;
   const body = document.body;
@@ -32,7 +88,636 @@
     }
   };
 
+  const safeRemove = (key) => {
+    try {
+      localStorage.removeItem(key);
+    } catch (_) {
+      /* ignore */
+    }
+  };
+
+  const normalizeTimerConfig = (raw) => {
+    const clampInt = (value, min, max, fallback) => {
+      const num = Number.parseInt(value, 10);
+      if (!Number.isFinite(num)) return fallback;
+      return Math.min(Math.max(num, min), max);
+    };
+    return {
+      focusMinutes: clampInt(raw?.focusMinutes, 1, 180, DEFAULT_TIMER_CONFIG.focusMinutes),
+      shortBreakMinutes: clampInt(
+        raw?.shortBreakMinutes,
+        1,
+        60,
+        DEFAULT_TIMER_CONFIG.shortBreakMinutes
+      ),
+      longBreakMinutes: clampInt(
+        raw?.longBreakMinutes,
+        1,
+        120,
+        DEFAULT_TIMER_CONFIG.longBreakMinutes
+      ),
+      sessionsBeforeLongBreak: clampInt(
+        raw?.sessionsBeforeLongBreak,
+        1,
+        12,
+        DEFAULT_TIMER_CONFIG.sessionsBeforeLongBreak
+      ),
+    };
+  };
+
+  const loadTimerConfig = () => {
+    const raw = safeGet(LS_KEYS.timerSettings);
+    if (!raw) return { ...DEFAULT_TIMER_CONFIG };
+    try {
+      const parsed = JSON.parse(raw);
+      return normalizeTimerConfig(parsed);
+    } catch (_) {
+      return { ...DEFAULT_TIMER_CONFIG };
+    }
+  };
+
+  const persistTimerConfig = (config) => {
+    try {
+      safeSet(LS_KEYS.timerSettings, JSON.stringify(normalizeTimerConfig(config)));
+    } catch (_) {
+      /* ignore */
+    }
+  };
+
+  const getDurationSeconds = (mode) => {
+    const durations = {
+      focus: (timerConfig?.focusMinutes || DEFAULT_TIMER_CONFIG.focusMinutes) * 60,
+      shortBreak:
+        (timerConfig?.shortBreakMinutes || DEFAULT_TIMER_CONFIG.shortBreakMinutes) * 60,
+      longBreak:
+        (timerConfig?.longBreakMinutes || DEFAULT_TIMER_CONFIG.longBreakMinutes) * 60,
+    };
+    return durations[mode] || FALLBACK_DURATIONS[mode] || FALLBACK_DURATIONS.focus;
+  };
+
+  const loadAlarmSound = () => {
+    const raw = safeGet(LS_KEYS.alarmSound);
+    if (raw && ALARM_SOUNDS[raw]) return raw;
+    return 'chime';
+  };
+
+  const persistAlarmSound = (id) => {
+    try {
+      safeSet(LS_KEYS.alarmSound, id);
+    } catch (_) {
+      /* ignore */
+    }
+  };
+
+  const applyAlarmSound = (id) => {
+    const soundId = ALARM_SOUNDS[id] ? id : 'chime';
+    const audio = document.getElementById('timerAlarm');
+    if (audio && audio.getAttribute('src') !== ALARM_SOUNDS[soundId].src) {
+      audio.setAttribute('src', ALARM_SOUNDS[soundId].src);
+      audio.load();
+    }
+    const select = document.getElementById('alarmTone');
+    if (select && select.value !== soundId) select.value = soundId;
+    persistAlarmSound(soundId);
+    return soundId;
+  };
+
+  const playAlarmPreview = async (id) => {
+    const soundId = ALARM_SOUNDS[id] ? id : 'chime';
+    const src = ALARM_SOUNDS[soundId].src;
+    try {
+      const preview = new Audio(src);
+      preview.currentTime = 0;
+      await preview.play();
+    } catch (error) {
+      console.error('Failed to play preview', error);
+      setTimerStatus('Unable to play the preview tone.', 'warning');
+    }
+  };
+
+  const getTodayKey = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const defaultData = () => ({
+    tasksByDate: {},
+    activeTaskByDate: {},
+  });
+
+  const loadAppData = () => {
+    const raw = safeGet(APP_DATA_KEY);
+    if (!raw) return defaultData();
+    try {
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object') return defaultData();
+      return {
+        tasksByDate: parsed.tasksByDate && typeof parsed.tasksByDate === 'object' ? parsed.tasksByDate : {},
+        activeTaskByDate:
+          parsed.activeTaskByDate && typeof parsed.activeTaskByDate === 'object'
+            ? parsed.activeTaskByDate
+            : {},
+      };
+    } catch (_) {
+      return defaultData();
+    }
+  };
+
+  const persistAppData = () => {
+    try {
+      safeSet(APP_DATA_KEY, JSON.stringify(appData));
+    } catch (_) {
+      /* ignore */
+    }
+  };
+
+  const getTasksForDate = (dateKey) => {
+    if (!appData.tasksByDate[dateKey]) {
+      appData.tasksByDate[dateKey] = [];
+    }
+    return appData.tasksByDate[dateKey];
+  };
+
+  const getActiveTaskId = (dateKey) => appData.activeTaskByDate?.[dateKey] || null;
+
+  const setActiveTaskId = (dateKey, taskId) => {
+    if (taskId) {
+      appData.activeTaskByDate[dateKey] = taskId;
+    } else {
+      delete appData.activeTaskByDate[dateKey];
+    }
+    persistAppData();
+  };
+
+  const upsertTask = (dateKey, task) => {
+    const tasks = getTasksForDate(dateKey);
+    const existingIndex = tasks.findIndex((item) => item.id === task.id);
+    if (existingIndex >= 0) {
+      tasks[existingIndex] = { ...tasks[existingIndex], ...task };
+    } else {
+      tasks.push({ ...TASK_DEFAULTS, ...task });
+    }
+    persistAppData();
+  };
+
+  const deleteTask = (dateKey, taskId) => {
+    const tasks = getTasksForDate(dateKey);
+    const filtered = tasks.filter((task) => task.id !== taskId);
+    appData.tasksByDate[dateKey] = filtered;
+    if (getActiveTaskId(dateKey) === taskId) {
+      setActiveTaskId(dateKey, null);
+    }
+    persistAppData();
+  };
+
+  const toggleTaskDone = (dateKey, taskId) => {
+    const tasks = getTasksForDate(dateKey);
+    const target = tasks.find((task) => task.id === taskId);
+    if (!target) return;
+    target.done = !target.done;
+    persistAppData();
+  };
+
+  const updateTaskCompletion = (dateKey, taskId, completedDelta = 1) => {
+    const tasks = getTasksForDate(dateKey);
+    const target = tasks.find((task) => task.id === taskId);
+    if (!target) return;
+    target.completed = Math.max(0, (Number(target.completed) || 0) + completedDelta);
+    persistAppData();
+  };
+
+  const buildTaskId = () => `task-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+
   let welcomeHiddenState = false;
+
+  const defaultTimerState = () => ({
+    mode: 'focus',
+    remaining: getDurationSeconds('focus'),
+    isRunning: false,
+    lastUpdated: null,
+    focusStreak: 0,
+  });
+
+  const loadTimerState = () => {
+    const raw = safeGet(TIMER_STORAGE_KEY);
+    if (!raw) return defaultTimerState();
+    try {
+      const parsed = JSON.parse(raw);
+      const base = defaultTimerState();
+      base.mode = ['focus', 'shortBreak', 'longBreak'].includes(parsed?.mode)
+        ? parsed.mode
+        : 'focus';
+      const fallbackRemaining = getDurationSeconds(base.mode);
+      base.remaining = Number.isFinite(parsed?.remaining)
+        ? Math.max(0, Math.floor(parsed.remaining))
+        : fallbackRemaining;
+      base.isRunning = !!parsed?.isRunning;
+      base.lastUpdated = Number.isFinite(parsed?.lastUpdated) ? parsed.lastUpdated : null;
+      base.focusStreak = Number.isFinite(parsed?.focusStreak)
+        ? Math.max(0, parsed.focusStreak)
+        : 0;
+
+      if (base.isRunning && base.lastUpdated) {
+        const elapsed = Math.floor((Date.now() - base.lastUpdated) / 1000);
+        base.remaining = Math.max(0, base.remaining - elapsed);
+        if (base.remaining === 0) {
+          base.isRunning = false;
+        }
+      }
+
+      if (!Number.isFinite(base.remaining) || base.remaining <= 0) {
+        base.remaining = fallbackRemaining;
+      }
+      return base;
+    } catch (_) {
+      return defaultTimerState();
+    }
+  };
+
+  const persistTimerState = () => {
+    try {
+      safeSet(
+        TIMER_STORAGE_KEY,
+        JSON.stringify({
+          ...timerState,
+          lastUpdated: timerState.lastUpdated || Date.now(),
+          focusStreak: timerState.focusStreak ?? 0,
+        })
+      );
+    } catch (_) {
+      /* ignore */
+    }
+  };
+
+  const formatSeconds = (totalSeconds) => {
+    const minutes = Math.floor(totalSeconds / 60)
+      .toString()
+      .padStart(2, '0');
+    const seconds = Math.floor(totalSeconds % 60)
+      .toString()
+      .padStart(2, '0');
+    return `${minutes}:${seconds}`;
+  };
+
+  const setTimerStatus = (message = '', tone = 'muted') => {
+    const statusEl = document.getElementById('timerStatus');
+    if (!statusEl) return;
+    statusEl.textContent = message;
+    statusEl.classList.remove('text-red-600', 'dark:text-red-400', 'text-yellow-600', 'dark:text-yellow-400');
+    if (tone === 'error') {
+      statusEl.classList.add('text-red-600', 'dark:text-red-400');
+    } else if (tone === 'warning') {
+      statusEl.classList.add('text-yellow-600', 'dark:text-yellow-400');
+    }
+  };
+
+  const renderTimer = () => {
+    const display = document.getElementById('timerDisplay');
+    const modeLabel = document.getElementById('timerMode');
+    if (display) display.textContent = formatSeconds(timerState.remaining);
+    if (modeLabel) {
+      const labels = {
+        focus: 'Focus',
+        shortBreak: 'Short Break',
+        longBreak: 'Long Break',
+      };
+      modeLabel.textContent = labels[timerState.mode] || 'Focus';
+    }
+
+    const modeButtons = document.querySelectorAll('[data-timer-mode]');
+    modeButtons.forEach((btn) => {
+      const isActive = btn.dataset.timerMode === timerState.mode;
+      btn.classList.toggle('btn-blue', isActive);
+      btn.classList.toggle('btn-gray', !isActive);
+      btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    });
+
+    const startButton = document.querySelector('[data-timer-control="start"]');
+    const pauseButton = document.querySelector('[data-timer-control="pause"]');
+    if (startButton) startButton.disabled = timerState.isRunning;
+    if (pauseButton) pauseButton.disabled = !timerState.isRunning;
+  };
+
+  const stopTimerTick = () => {
+    if (timerIntervalId) {
+      clearInterval(timerIntervalId);
+      timerIntervalId = null;
+    }
+  };
+
+  const resetTimer = ({ mode = timerState.mode, persist = true, resetStreak = false } = {}) => {
+    timerState.mode = mode;
+    timerState.remaining = getDurationSeconds(mode);
+    if (resetStreak) timerState.focusStreak = 0;
+    timerState.isRunning = false;
+    timerState.lastUpdated = null;
+    stopTimerTick();
+    renderTimer();
+    if (persist) persistTimerState();
+  };
+
+  const handleTimerComplete = () => {
+    stopTimerTick();
+    timerState.isRunning = false;
+    timerState.remaining = 0;
+    renderTimer();
+    persistTimerState();
+
+    const audio = document.getElementById('timerAlarm');
+    if (audio) {
+      audio.currentTime = 0;
+      audio.play().catch(() => {
+        /* ignore */
+      });
+    }
+
+    if (timerState.mode === 'focus') {
+      const todayKey = getTodayKey();
+      const activeTaskId = getActiveTaskId(todayKey);
+      if (activeTaskId) {
+        updateTaskCompletion(todayKey, activeTaskId, 1);
+        renderTasks();
+      }
+
+      const newStreak = (timerState.focusStreak || 0) + 1;
+      const reachedLongBreak = newStreak >= timerConfig.sessionsBeforeLongBreak;
+      timerState.focusStreak = reachedLongBreak ? 0 : newStreak;
+      const nextMode = reachedLongBreak ? 'longBreak' : 'shortBreak';
+      resetTimer({ mode: nextMode, persist: false });
+      startTimer({ clearStatus: false });
+      setTimerStatus(
+        activeTaskId
+          ? `Focus complete! Starting a ${nextMode === 'longBreak' ? 'long' : 'short'} break.`
+          : `Focus complete, but no active task was selected. Starting a ${
+              nextMode === 'longBreak' ? 'long' : 'short'
+            } break.`,
+        activeTaskId ? 'muted' : 'warning'
+      );
+      return;
+    }
+
+    // Break finished -> go back to focus
+    resetTimer({ mode: 'focus', persist: false });
+    startTimer({ clearStatus: false });
+    setTimerStatus('Break finished. Starting the next focus session.');
+  };
+
+  const handleTimerTick = () => {
+    if (!timerState.isRunning) return;
+    const now = Date.now();
+    const last = timerState.lastUpdated || now;
+    const elapsed = Math.max(0, Math.floor((now - last) / 1000));
+    if (elapsed <= 0) return;
+    timerState.remaining = Math.max(0, timerState.remaining - elapsed);
+    timerState.lastUpdated = now;
+    renderTimer();
+    persistTimerState();
+    if (timerState.remaining === 0) {
+      handleTimerComplete();
+    }
+  };
+
+  const startTimer = ({ clearStatus = true } = {}) => {
+    if (timerState.isRunning) return;
+    if (!Number.isFinite(timerState.remaining) || timerState.remaining <= 0) {
+      timerState.remaining = getDurationSeconds(timerState.mode);
+    }
+    timerState.isRunning = true;
+    timerState.lastUpdated = Date.now();
+    if (clearStatus) setTimerStatus('');
+    stopTimerTick();
+    timerIntervalId = window.setInterval(handleTimerTick, 1000);
+    renderTimer();
+    persistTimerState();
+  };
+
+  const pauseTimer = () => {
+    if (!timerState.isRunning) return;
+    stopTimerTick();
+    timerState.isRunning = false;
+    timerState.lastUpdated = null;
+    renderTimer();
+    persistTimerState();
+  };
+
+  const switchTimerMode = (mode) => {
+    if (!['focus', 'shortBreak', 'longBreak'].includes(mode)) return;
+    resetTimer({ mode });
+    setTimerStatus('');
+  };
+
+  const renderActiveTaskBadge = () => {
+    const activeLabel = document.getElementById('activeTaskLabel');
+    const todayKey = getTodayKey();
+    const activeId = getActiveTaskId(todayKey);
+    const activeTask = getTasksForDate(todayKey).find((task) => task.id === activeId);
+    if (activeLabel) {
+      activeLabel.textContent = activeTask
+        ? `Active task: ${activeTask.title}`
+        : 'No active task selected';
+    }
+    const activeTimerLabel = document.getElementById('timerActiveTask');
+    if (activeTimerLabel) {
+      activeTimerLabel.textContent = activeTask ? activeTask.title : 'None';
+    }
+  };
+
+  const renderTodaySummary = () => {
+    const summary = document.getElementById('todaySummary');
+    const todayKey = getTodayKey();
+    const tasks = getTasksForDate(todayKey);
+    if (!summary) return;
+    summary.innerHTML = '';
+    if (!tasks.length) {
+      const p = document.createElement('p');
+      p.className = 'text-sm text-gray-600 dark:text-gray-300';
+      p.textContent = 'Add tasks for today to see your summary.';
+      summary.appendChild(p);
+      return;
+    }
+
+    const list = document.createElement('div');
+    list.className = 'space-y-3';
+    tasks.forEach((task) => {
+      const item = document.createElement('div');
+      item.className = 'flex flex-col sm:flex-row sm:items-center sm:justify-between border border-gray-200 dark:border-gray-700 rounded-lg p-3';
+
+      const text = document.createElement('div');
+      text.className = 'space-y-1';
+      const title = document.createElement('p');
+      title.className = 'font-semibold text-gray-900 dark:text-gray-100';
+      title.textContent = task.title;
+      text.appendChild(title);
+      const meta = document.createElement('p');
+      meta.className = 'text-sm text-gray-600 dark:text-gray-300';
+      meta.textContent = `Planned: ${task.planned || 0} • Completed: ${task.completed || 0} • ${
+        task.done ? 'Done' : 'In progress'
+      }`;
+      text.appendChild(meta);
+      item.appendChild(text);
+      list.appendChild(item);
+    });
+    summary.appendChild(list);
+  };
+
+  const renderWeekSummary = () => {
+    const list = document.getElementById('weekSummary');
+    if (!list) return;
+    list.innerHTML = '';
+    const today = new Date();
+    for (let i = 6; i >= 0; i -= 1) {
+      const date = new Date(today);
+      date.setDate(today.getDate() - i);
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
+        date.getDate()
+      ).padStart(2, '0')}`;
+      const tasks = appData.tasksByDate[key] || [];
+      const planned = tasks.reduce((acc, task) => acc + (Number(task.planned) || 0), 0);
+      const completed = tasks.reduce((acc, task) => acc + (Number(task.completed) || 0), 0);
+
+      const item = document.createElement('div');
+      item.className = 'flex items-center justify-between border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-3';
+      const dateLabel = date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+      const title = document.createElement('p');
+      title.className = 'font-semibold text-gray-900 dark:text-gray-100';
+      title.textContent = dateLabel;
+      item.appendChild(title);
+      const metrics = document.createElement('p');
+      metrics.className = 'text-sm text-gray-600 dark:text-gray-300';
+      metrics.textContent = `Planned: ${planned} • Completed: ${completed}`;
+      item.appendChild(metrics);
+      list.appendChild(item);
+    }
+  };
+
+  const renderTasks = () => {
+    const list = document.getElementById('taskList');
+    const todayKey = getTodayKey();
+    const tasks = getTasksForDate(todayKey);
+    if (!list) return;
+    list.innerHTML = '';
+
+    if (!tasks.length) {
+      const empty = document.createElement('p');
+      empty.className = 'text-sm text-gray-600 dark:text-gray-300';
+      empty.textContent = "No tasks for today yet. Let's plan your focus sessions.";
+      list.appendChild(empty);
+    } else {
+      tasks
+        .slice()
+        .sort((a, b) => Number(a.done) - Number(b.done))
+        .forEach((task) => {
+          const wrapper = document.createElement('div');
+          wrapper.className = 'border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3';
+
+          const header = document.createElement('div');
+          header.className = 'flex items-start justify-between gap-3';
+          const title = document.createElement('div');
+          title.className = 'space-y-1';
+          const heading = document.createElement('p');
+          heading.className = `font-semibold text-lg ${task.done ? 'line-through text-gray-500 dark:text-gray-400' : ''}`;
+          heading.textContent = task.title;
+          title.appendChild(heading);
+          if (task.description) {
+            const desc = document.createElement('p');
+            desc.className = 'text-sm text-gray-600 dark:text-gray-300';
+            desc.textContent = task.description;
+            title.appendChild(desc);
+          }
+          header.appendChild(title);
+
+          const status = document.createElement('span');
+          status.className = `px-2 py-1 text-xs font-semibold rounded-full ${
+            task.done ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+          }`;
+          status.textContent = task.done ? 'Done' : 'In progress';
+          header.appendChild(status);
+          wrapper.appendChild(header);
+
+          const meta = document.createElement('div');
+          meta.className = 'flex flex-wrap gap-3 text-sm text-gray-700 dark:text-gray-300';
+          meta.innerHTML = `<span class="font-semibold">Planned:</span> ${task.planned || 0} <span class="font-semibold">Completed:</span> ${
+            task.completed || 0
+          }`;
+          wrapper.appendChild(meta);
+
+          const actions = document.createElement('div');
+          actions.className = 'flex flex-wrap gap-2';
+
+          const activate = document.createElement('button');
+          activate.type = 'button';
+          activate.className = 'btn btn-gray';
+          activate.dataset.taskAction = 'activate';
+          activate.dataset.taskId = task.id;
+          activate.textContent = getActiveTaskId(todayKey) === task.id ? 'Active task' : 'Set active';
+          actions.appendChild(activate);
+
+          const toggleDoneBtn = document.createElement('button');
+          toggleDoneBtn.type = 'button';
+          toggleDoneBtn.className = 'btn btn-gray';
+          toggleDoneBtn.dataset.taskAction = 'toggle';
+          toggleDoneBtn.dataset.taskId = task.id;
+          toggleDoneBtn.textContent = task.done ? 'Mark as in progress' : 'Mark done';
+          actions.appendChild(toggleDoneBtn);
+
+          const editBtn = document.createElement('button');
+          editBtn.type = 'button';
+          editBtn.className = 'btn btn-blue';
+          editBtn.dataset.taskAction = 'edit';
+          editBtn.dataset.taskId = task.id;
+          editBtn.textContent = 'Edit';
+          actions.appendChild(editBtn);
+
+          const deleteBtn = document.createElement('button');
+          deleteBtn.type = 'button';
+          deleteBtn.className = 'btn btn-red';
+          deleteBtn.dataset.taskAction = 'delete';
+          deleteBtn.dataset.taskId = task.id;
+          deleteBtn.textContent = 'Delete';
+          actions.appendChild(deleteBtn);
+
+          wrapper.appendChild(actions);
+          list.appendChild(wrapper);
+        });
+    }
+    renderTodaySummary();
+    renderWeekSummary();
+    renderActiveTaskBadge();
+  };
+
+  const resetTaskForm = () => {
+    const form = document.getElementById('taskForm');
+    const title = document.getElementById('taskTitle');
+    const description = document.getElementById('taskDescription');
+    const planned = document.getElementById('taskPlanned');
+    const submit = document.getElementById('taskSubmit');
+    const cancel = document.getElementById('taskCancel');
+    editingTaskId = null;
+    if (form) form.reset();
+    if (title) title.value = '';
+    if (description) description.value = '';
+    if (planned) planned.value = TASK_DEFAULTS.planned;
+    if (submit) submit.textContent = 'Add task';
+    if (cancel) cancel.classList.add('hidden');
+  };
+
+  const populateTaskForm = (task) => {
+    const title = document.getElementById('taskTitle');
+    const description = document.getElementById('taskDescription');
+    const planned = document.getElementById('taskPlanned');
+    const submit = document.getElementById('taskSubmit');
+    const cancel = document.getElementById('taskCancel');
+    editingTaskId = task.id;
+    if (title) title.value = task.title || '';
+    if (description) description.value = task.description || '';
+    if (planned) planned.value = task.planned ?? TASK_DEFAULTS.planned;
+    if (submit) submit.textContent = 'Update task';
+    if (cancel) cancel.classList.remove('hidden');
+  };
+
 
   function applyDarkMode(enabled, { persist = true, withTransition = false } = {}) {
     const shouldEnable = !!enabled;
@@ -77,10 +762,10 @@
     if (persist) safeSet(LS_KEYS.welcomeHidden, shouldHide ? '1' : '0');
 
     if (shouldHide) {
-      if (safeGet(LS_KEYS.view) === 'welcome') safeSet(LS_KEYS.view, 'settings');
+      if (safeGet(LS_KEYS.view) === 'welcome') safeSet(LS_KEYS.view, 'today');
       const welcomeSection = document.getElementById('welcome');
       if (welcomeSection && welcomeSection.classList.contains('active')) {
-        navigateTo('settings');
+        navigateTo('today');
       }
     }
   }
@@ -530,7 +1215,7 @@
         return true;
       }
 
-      finishWithMessage('PWA Template has been updated to the latest version.', {
+      finishWithMessage('TaskTrack has been updated to the latest version.', {
         reload: true,
       });
       return true;
@@ -567,7 +1252,7 @@
       const newWorker = await newWorkerPromise;
       if (await applyUpdate(newWorker)) return;
 
-      finishWithMessage("You're already using the latest version of PWA Template.");
+      finishWithMessage("You're already using the latest version of TaskTrack.");
     } catch (error) {
       console.error('Update check failed', error);
       finishWithMessage("We couldn't complete the update check. Please try again later.");
@@ -675,6 +1360,10 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => {
+    appData = loadAppData();
+    timerConfig = loadTimerConfig();
+    timerState = loadTimerState();
+
     const storedTheme = safeGet(LS_KEYS.theme);
     applyDarkMode(storedTheme === '1', { persist: false });
 
@@ -700,6 +1389,83 @@
     if (stickyToggle) {
       stickyToggle.addEventListener('change', (event) => {
         applyMobileNavSticky(event.target.checked);
+      });
+    }
+
+    const timerSettingsForm = document.getElementById('timerSettingsForm');
+    const timerSettingsReset = document.getElementById('timerSettingsReset');
+    const applyTimerSettingsToForm = () => {
+      const focusField = document.getElementById('focusMinutes');
+      const shortField = document.getElementById('shortBreakMinutes');
+      const longField = document.getElementById('longBreakMinutes');
+      const streakField = document.getElementById('sessionsBeforeLongBreak');
+      if (focusField) focusField.value = timerConfig.focusMinutes;
+      if (shortField) shortField.value = timerConfig.shortBreakMinutes;
+      if (longField) longField.value = timerConfig.longBreakMinutes;
+      if (streakField) streakField.value = timerConfig.sessionsBeforeLongBreak;
+    };
+
+    applyTimerSettingsToForm();
+
+    const currentAlarm = applyAlarmSound(loadAlarmSound());
+
+    const updateTimerConfig = (nextConfig, { resetSession = true } = {}) => {
+      timerConfig = normalizeTimerConfig(nextConfig);
+      persistTimerConfig(timerConfig);
+      applyTimerSettingsToForm();
+      if (resetSession) {
+        resetTimer({ mode: timerState.mode, persist: true });
+        setTimerStatus('Timer settings updated. New durations apply to the next session.');
+      }
+    };
+
+    if (timerSettingsForm) {
+      timerSettingsForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const focusMinutes = Number.parseInt(document.getElementById('focusMinutes')?.value, 10);
+        const shortBreakMinutes = Number.parseInt(
+          document.getElementById('shortBreakMinutes')?.value,
+          10
+        );
+        const longBreakMinutes = Number.parseInt(
+          document.getElementById('longBreakMinutes')?.value,
+          10
+        );
+        const sessionsBeforeLongBreak = Number.parseInt(
+          document.getElementById('sessionsBeforeLongBreak')?.value,
+          10
+        );
+        updateTimerConfig({
+          focusMinutes,
+          shortBreakMinutes,
+          longBreakMinutes,
+          sessionsBeforeLongBreak,
+        });
+      });
+    }
+
+    if (timerSettingsReset) {
+      timerSettingsReset.addEventListener('click', () => {
+        updateTimerConfig(DEFAULT_TIMER_CONFIG, { resetSession: true });
+      });
+    }
+
+    const alarmSelect = document.getElementById('alarmTone');
+    if (alarmSelect) {
+      alarmSelect.value = currentAlarm;
+      alarmSelect.addEventListener('change', (event) => {
+        const next = event.target.value;
+        applyAlarmSound(next);
+        setTimerStatus('Notification tone updated.');
+      });
+    }
+
+    const alarmPreview = document.getElementById('alarmTonePreview');
+    if (alarmPreview) {
+      alarmPreview.addEventListener('click', () => {
+        const select = document.getElementById('alarmTone');
+        const selected = select ? select.value : currentAlarm;
+        playAlarmPreview(selected);
       });
     }
 
@@ -740,8 +1506,7 @@
     const brandHome = $('#brandHome');
     if (brandHome) {
       brandHome.addEventListener('click', () => {
-        const target = welcomeHiddenState ? 'settings' : 'welcome';
-        navigateTo(target);
+        navigateTo('today');
         if (window.innerWidth < 768) setSidebarOpen(false);
       });
     }
@@ -753,16 +1518,132 @@
     });
 
     const storedView = safeGet(LS_KEYS.view);
-    const welcomeHidden = welcomeHiddenState;
+    const fallbackView = 'today';
     if (
       storedView &&
       document.getElementById(storedView) &&
-      !(welcomeHidden && storedView === 'welcome')
+      !(storedView === 'welcome' && welcomeHiddenState)
     ) {
       navigateTo(storedView);
-    } else {
-      navigateTo(welcomeHidden ? 'settings' : 'welcome');
+    } else if (document.getElementById(fallbackView)) {
+      navigateTo(fallbackView);
     }
+
+    const todayLabel = document.getElementById('todayDateLabel');
+    if (todayLabel) {
+      const now = new Date();
+      todayLabel.textContent = now.toLocaleDateString(undefined, {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+      });
+    }
+
+    resetTaskForm();
+    renderTasks();
+    renderTimer();
+    if (timerState.isRunning) {
+      timerState.lastUpdated = Date.now();
+      timerIntervalId = window.setInterval(handleTimerTick, 1000);
+    }
+
+    const taskForm = document.getElementById('taskForm');
+    if (taskForm) {
+      taskForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const todayKey = getTodayKey();
+        const title = (document.getElementById('taskTitle')?.value || '').trim();
+        const description = document.getElementById('taskDescription')?.value || '';
+        const plannedRaw = Number.parseInt(document.getElementById('taskPlanned')?.value, 10);
+        if (!title) {
+          setTimerStatus('Please add a title for your task.', 'warning');
+          return;
+        }
+        const planned = Number.isFinite(plannedRaw) ? Math.max(0, plannedRaw) : TASK_DEFAULTS.planned;
+        const existingTask = editingTaskId
+          ? getTasksForDate(todayKey).find((task) => task.id === editingTaskId)
+          : null;
+        const completed = Number.isFinite(existingTask?.completed)
+          ? Math.max(0, existingTask.completed)
+          : TASK_DEFAULTS.completed;
+
+        const payload = {
+          id: editingTaskId || buildTaskId(),
+          title,
+          description,
+          planned,
+          completed,
+          done: existingTask ? existingTask.done : false,
+        };
+        upsertTask(todayKey, payload);
+        if (!getActiveTaskId(todayKey)) {
+          setActiveTaskId(todayKey, payload.id);
+        }
+        renderTasks();
+        resetTaskForm();
+      });
+    }
+
+    const cancelEdit = document.getElementById('taskCancel');
+    if (cancelEdit) {
+      cancelEdit.addEventListener('click', () => {
+        resetTaskForm();
+      });
+    }
+
+    const taskList = document.getElementById('taskList');
+    if (taskList) {
+      taskList.addEventListener('click', (event) => {
+        const actionTarget = event.target.closest('[data-task-action]');
+        if (!actionTarget) return;
+        const todayKey = getTodayKey();
+        const { taskId, taskAction } = actionTarget.dataset;
+        if (!taskId) return;
+        switch (taskAction) {
+          case 'toggle':
+            toggleTaskDone(todayKey, taskId);
+            renderTasks();
+            break;
+          case 'delete':
+            void showConfirm({
+              message: 'Delete this task?',
+              confirmLabel: 'Delete',
+              cancelLabel: 'Cancel',
+            }).then((confirmed) => {
+              if (!confirmed) return;
+              deleteTask(todayKey, taskId);
+              renderTasks();
+            });
+            break;
+          case 'edit': {
+            const task = getTasksForDate(todayKey).find((item) => item.id === taskId);
+            if (task) populateTaskForm(task);
+            break;
+          }
+          case 'activate':
+            setActiveTaskId(todayKey, taskId);
+            renderTasks();
+            break;
+          default:
+            break;
+        }
+      });
+    }
+
+    $$('[data-timer-mode]').forEach((button) => {
+      button.addEventListener('click', () => {
+        switchTimerMode(button.dataset.timerMode);
+      });
+    });
+
+    $$('[data-timer-control]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const { timerControl } = button.dataset;
+        if (timerControl === 'start') startTimer();
+        if (timerControl === 'pause') pauseTimer();
+        if (timerControl === 'reset') resetTimer({ resetStreak: true });
+      });
+    });
 
     document.addEventListener('click', (event) => {
       const actionTarget = event.target.closest('[data-action]');
@@ -778,16 +1659,7 @@
             cancelLabel: 'Cancel',
           }).then((confirmed) => {
             if (!confirmed) return;
-            try {
-              localStorage.clear();
-            } catch (_) {
-              /* ignore */
-            }
-            try {
-              sessionStorage.clear();
-            } catch (_) {
-              /* ignore */
-            }
+            PERSISTED_KEYS.forEach((key) => safeRemove(key));
             window.location.reload();
           });
           break;
