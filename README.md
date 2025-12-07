@@ -1,17 +1,19 @@
-# PWA Template
+# TaskTrack Pomodoro
 
 > **These works are a personal project and in no way associated with my employer.**
 
 ## Purpose
 
-PWA Template is a lightweight Progressive Web App shell that delivers the base installation experience, theme controls, and update surfaces for future personal finance tools.
+TaskTrack Pomodoro is a lightweight offline-first planner that combines day-level task tracking with a built-in pomodoro timer.
 
 ## Features
 
-- **Progressive Web App base** – Installable shell with offline caching managed by the service worker.
-- **Custom Themes** – Toggle dark mode or choose alternate visual themes.
-- **Update tools** – Check for service worker updates and review release notes from the built-in changelog.
-- **Local reset** – Clear locally stored data with a single action during testing.
+- **Daily task planning** – Capture today's tasks with descriptions, planned pomodoros, completion counts, and a done toggle.
+- **Pomodoro timer** – Focus/short-break/long-break modes with start, pause, reset, and an alarm when a focus session completes.
+- **Task-linked sessions** – Choose an active task; completed focus sessions automatically increment its pomodoro count.
+- **History** – Store tasks by date, show a "Today" summary, and list planned vs completed pomodoros for the last seven days.
+- **Local cache isolation** – Namespaced localStorage keys prevent clashing with other apps built from the same template.
+- **PWA shell** – Installable experience with theme controls and offline caching.
 
 ## Getting Started
 
@@ -29,7 +31,7 @@ Then visit `http://localhost:8080` in your browser.
 
 ## Progressive Web App
 
-PWA Template is installable as a Progressive Web App (PWA):
+TaskTrack Pomodoro is installable as a Progressive Web App (PWA):
 
 1. The `manifest.webmanifest` file describes the app metadata and reuses the sidebar logo for install icons.
 2. `service-worker.js` caches the core assets so the app can load offline after the first visit.
@@ -40,7 +42,7 @@ To install the app, open it in a supporting browser (Chrome, Edge, or mobile equ
 ## Development Notes
 
 - Styles are built with Tailwind CSS (CLI, v3). The source stylesheet is `src/styles.css` and the compiled output is `assets/styles.css`, which is checked into the repo so GitHub Pages can deploy without a build step.
-- All application state is stored in `localStorage`. Clearing the browser storage resets the app to defaults.
+- All application state is stored in `localStorage` using the `time-tracker-pomodoro-v1` prefix to avoid clashing with other apps from the template. Clearing the browser storage resets the app to defaults.
 
 ### App Versioning
 
