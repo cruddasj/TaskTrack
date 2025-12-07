@@ -14,6 +14,7 @@
     collapsible: `${STORAGE_PREFIX}-collapsedCards`,
     timerSettings: `${STORAGE_PREFIX}-timerSettings`,
     alarmSound: `${STORAGE_PREFIX}-alarmSound`,
+    customAlarm: `${STORAGE_PREFIX}-customAlarm`,
   };
 
   const PERSISTED_KEYS = [
@@ -53,6 +54,8 @@
     },
   };
 
+  const CUSTOM_ALARM_MAX_BYTES = 2 * 1024 * 1024;
+
   const TASK_DEFAULTS = {
     planned: 1,
     completed: 0,
@@ -66,6 +69,7 @@
   let appData = null;
   let timerState = null;
   let timerConfig = { ...DEFAULT_TIMER_CONFIG };
+  let alarmUnlocked = false;
 
   const root = document.documentElement;
   const body = document.body;
@@ -156,8 +160,41 @@
     return durations[mode] || FALLBACK_DURATIONS[mode] || FALLBACK_DURATIONS.focus;
   };
 
+  const loadCustomAlarmSound = () => {
+    const raw = safeGet(LS_KEYS.customAlarm);
+    if (!raw) return null;
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed?.src && typeof parsed.src === 'string') {
+        return {
+          name: parsed.name || 'Custom tone',
+          src: parsed.src,
+        };
+      }
+    } catch (_) {
+      /* ignore */
+    }
+    return null;
+  };
+
+  const persistCustomAlarmSound = (payload) => {
+    if (!payload) {
+      safeRemove(LS_KEYS.customAlarm);
+      return;
+    }
+    try {
+      safeSet(
+        LS_KEYS.customAlarm,
+        JSON.stringify({ name: payload.name || 'Custom tone', src: payload.src })
+      );
+    } catch (_) {
+      /* ignore */
+    }
+  };
+
   const loadAlarmSound = () => {
     const raw = safeGet(LS_KEYS.alarmSound);
+    if (raw === 'custom' && loadCustomAlarmSound()) return 'custom';
     if (raw && ALARM_SOUNDS[raw]) return raw;
     return 'chime';
   };
@@ -170,30 +207,132 @@
     }
   };
 
-  const applyAlarmSound = (id) => {
+  const getAlarmSource = (id) => {
+    if (id === 'custom') {
+      const custom = loadCustomAlarmSound();
+      if (custom?.src) {
+        return { id: 'custom', label: custom.name || 'Custom tone', src: custom.src };
+      }
+    }
     const soundId = ALARM_SOUNDS[id] ? id : 'chime';
+    return ALARM_SOUNDS[soundId];
+  };
+
+  const applyAlarmSound = (id) => {
+    const source = getAlarmSource(id);
+    const resolvedId = source?.id || 'chime';
     const audio = document.getElementById('timerAlarm');
-    if (audio && audio.getAttribute('src') !== ALARM_SOUNDS[soundId].src) {
-      audio.setAttribute('src', ALARM_SOUNDS[soundId].src);
+    if (audio && source?.src && audio.getAttribute('src') !== source.src) {
+      audio.setAttribute('src', source.src);
       audio.load();
     }
     const select = document.getElementById('alarmTone');
-    if (select && select.value !== soundId) select.value = soundId;
-    persistAlarmSound(soundId);
-    return soundId;
+    if (select && select.value !== resolvedId) select.value = resolvedId;
+    persistAlarmSound(resolvedId);
+    return resolvedId;
   };
 
   const playAlarmPreview = async (id) => {
-    const soundId = ALARM_SOUNDS[id] ? id : 'chime';
-    const src = ALARM_SOUNDS[soundId].src;
+    const source = getAlarmSource(id);
+    if (!source?.src) return;
     try {
-      const preview = new Audio(src);
+      const preview = new Audio(source.src);
       preview.currentTime = 0;
       await preview.play();
+      alarmUnlocked = true;
     } catch (error) {
       console.error('Failed to play preview', error);
       setTimerStatus('Unable to play the preview tone.', 'warning');
     }
+  };
+
+  const ensureAlarmReady = async () => {
+    const audio = document.getElementById('timerAlarm');
+    if (!audio) return false;
+    if (alarmUnlocked) return true;
+    try {
+      audio.muted = true;
+      audio.currentTime = 0;
+      await audio.play();
+      await audio.pause();
+      audio.currentTime = 0;
+      audio.muted = false;
+      alarmUnlocked = true;
+      return true;
+    } catch (_) {
+      audio.muted = false;
+      return false;
+    }
+  };
+
+  const playAlarmSound = async () => {
+    const audio = document.getElementById('timerAlarm');
+    if (!audio) return;
+    const ready = alarmUnlocked || (document.visibilityState === 'visible' && (await ensureAlarmReady()));
+    if (!ready) {
+      setTimerStatus('Tap Start or Preview to enable alarm audio.', 'warning');
+      return;
+    }
+    try {
+      audio.currentTime = 0;
+      await audio.play();
+    } catch (error) {
+      console.error('Failed to play alarm', error);
+      setTimerStatus('Unable to play the alarm sound.', 'warning');
+    }
+  };
+
+  const requestNotificationPermission = async () => {
+    if (!('Notification' in window) || typeof Notification.requestPermission !== 'function') {
+      return 'denied';
+    }
+    if (Notification.permission !== 'default') return Notification.permission;
+    try {
+      return await Notification.requestPermission();
+    } catch (error) {
+      console.error('Notification permission failed', error);
+      return 'denied';
+    }
+  };
+
+  const showTimerNotification = async ({ title, body }) => {
+    if (!('Notification' in window)) return;
+    const permission = await requestNotificationPermission();
+    if (permission !== 'granted') return;
+    const options = {
+      body,
+      tag: 'tasktrack-timer',
+      renotify: true,
+      requireInteraction: true,
+      icon: 'assets/icons/icon-192.png',
+      badge: 'assets/icons/icon-192.png',
+      vibrate: [200, 100, 200],
+    };
+    try {
+      const registration = await navigator.serviceWorker?.ready;
+      if (registration?.showNotification) {
+        await registration.showNotification(title, options);
+        return;
+      }
+    } catch (error) {
+      console.error('Service worker notification failed', error);
+    }
+    try {
+      new Notification(title, options);
+    } catch (error) {
+      console.error('Notification display failed', error);
+    }
+  };
+
+  const renderCustomAlarmHelper = () => {
+    const helper = document.getElementById('customToneHelper');
+    if (!helper) return;
+    const custom = loadCustomAlarmSound();
+    if (custom?.name) {
+      helper.textContent = `Using ${custom.name}. Upload another file to replace it or pick a built-in tone above.`;
+      return;
+    }
+    helper.textContent = 'Upload a small audio file (2MB max) to use as your notification tone.';
   };
 
   const getTodayKey = () => {
@@ -463,13 +602,7 @@
     renderTimer();
     persistTimerState();
 
-    const audio = document.getElementById('timerAlarm');
-    if (audio) {
-      audio.currentTime = 0;
-      audio.play().catch(() => {
-        /* ignore */
-      });
-    }
+    await playAlarmSound();
 
     if (timerState.mode === 'focus') {
       const todayKey = getTodayKey();
@@ -502,6 +635,10 @@
       const nextMode = reachedLongBreak ? 'longBreak' : 'shortBreak';
       resetTimer({ mode: nextMode, persist: false });
       startTimer({ clearStatus: false });
+      void showTimerNotification({
+        title: 'Focus complete',
+        body: `Starting your ${nextMode === 'longBreak' ? 'long' : 'short'} break.`,
+      });
       setTimerStatus(
         activeTask
           ? `Focus complete! Starting a ${nextMode === 'longBreak' ? 'long' : 'short'} break.`
@@ -516,6 +653,10 @@
     // Break finished -> go back to focus
     resetTimer({ mode: 'focus', persist: false });
     startTimer({ clearStatus: false });
+    void showTimerNotification({
+      title: 'Break finished',
+      body: 'Time to start your next focus session.',
+    });
     setTimerStatus('Break finished. Starting the next focus session.');
   };
 
@@ -1520,6 +1661,7 @@
     applyTimerSettingsToForm();
 
     const currentAlarm = applyAlarmSound(loadAlarmSound());
+    renderCustomAlarmHelper();
 
     const updateTimerConfig = (nextConfig, { resetSession = true } = {}) => {
       timerConfig = normalizeTimerConfig(nextConfig);
@@ -1569,6 +1711,8 @@
         const next = event.target.value;
         applyAlarmSound(next);
         setTimerStatus('Notification tone updated.');
+        if (next !== 'custom') alarmUnlocked = false;
+        renderCustomAlarmHelper();
       });
     }
 
@@ -1578,6 +1722,36 @@
         const select = document.getElementById('alarmTone');
         const selected = select ? select.value : currentAlarm;
         playAlarmPreview(selected);
+      });
+    }
+
+    const customAlarmInput = document.getElementById('customAlarmFile');
+    if (customAlarmInput) {
+      customAlarmInput.addEventListener('change', (event) => {
+        const [file] = event.target.files || [];
+        if (!file) return;
+        if (file.size > CUSTOM_ALARM_MAX_BYTES) {
+          setTimerStatus('Custom tone must be 2MB or smaller.', 'warning');
+          event.target.value = '';
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = typeof reader.result === 'string' ? reader.result : '';
+          if (!result.startsWith('data:audio')) {
+            setTimerStatus('Please choose an audio file.', 'warning');
+            return;
+          }
+          persistCustomAlarmSound({ name: file.name, src: result });
+          applyAlarmSound('custom');
+          alarmUnlocked = false;
+          renderCustomAlarmHelper();
+          setTimerStatus('Custom notification tone saved.');
+        };
+        reader.onerror = () => {
+          setTimerStatus('Failed to read the selected file.', 'error');
+        };
+        reader.readAsDataURL(file);
       });
     }
 
@@ -1760,7 +1934,10 @@
     $$('[data-timer-control]').forEach((button) => {
       button.addEventListener('click', () => {
         const { timerControl } = button.dataset;
-        if (timerControl === 'start') startTimer();
+        if (timerControl === 'start') {
+          void ensureAlarmReady();
+          startTimer();
+        }
         if (timerControl === 'pause') pauseTimer();
         if (timerControl === 'reset') resetTimer({ resetStreak: true });
       });
